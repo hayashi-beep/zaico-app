@@ -8,7 +8,6 @@
 
   <meta name="application-name" content="CONNECT 在庫管理" />
   <meta name="apple-mobile-web-app-title" content="CONNECT" />
-
   <meta name="mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="default" />
@@ -16,14 +15,12 @@
 
   <link rel="icon" href="./icon.png" />
   <link rel="apple-touch-icon" href="./icon.png" />
-  <link rel="shortcut icon" href="./icon.png" />
 
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://unpkg.com/html5-qrcode"></script>
 
   <style>
-    html,
-    body {
+    html, body {
       overscroll-behavior: none;
       -webkit-tap-highlight-color: transparent;
     }
@@ -44,14 +41,25 @@
     <div class="grid gap-4">
       <div>
         <label class="block text-sm font-semibold mb-1">型式 / バーコード</label>
-        <input id="codeInput" type="text" placeholder="型式またはJANコード"
+        <input id="itemCode" type="text" placeholder="型式またはJANコード"
           class="w-full rounded-xl border px-4 py-3 text-base" />
       </div>
 
-      <div class="grid grid-cols-2 gap-3">
-        <button id="startScanBtn" class="rounded-xl bg-blue-600 text-white py-3 font-bold">カメラで読み取る</button>
-        <button id="stopScanBtn" class="rounded-xl bg-slate-600 text-white py-3 font-bold hidden">読み取り停止</button>
+      <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+        <button id="startScanBtn" class="rounded-xl bg-blue-600 text-white py-3 font-bold">
+          カメラで読み取る
+        </button>
+
+        <button id="takePhotoBtn" class="rounded-xl bg-indigo-600 text-white py-3 font-bold">
+          カメラで写真を撮る
+        </button>
+
+        <button id="stopScanBtn" class="rounded-xl bg-slate-600 text-white py-3 font-bold hidden">
+          読み取り停止
+        </button>
       </div>
+
+      <input id="photoInput" type="file" accept="image/*" capture="environment" class="hidden" />
 
       <div id="readerWrapper" class="hidden">
         <div id="reader" class="rounded-xl overflow-hidden border"></div>
@@ -86,13 +94,15 @@
         <input id="customerInput" type="text" class="w-full rounded-xl border px-4 py-3 text-base" />
       </div>
 
-      <button id="registerBtn" class="w-full rounded-xl bg-emerald-600 text-white py-4 font-bold text-lg">
-        在庫管理表へ反映させる
-      </button>
+      <div class="flex gap-3">
+        <button id="registerBtn" class="w-32 rounded-xl bg-emerald-600 text-white py-3 font-bold">
+          登録
+        </button>
 
-      <button id="cancelEditBtn" class="w-full rounded-xl bg-slate-500 text-white py-3 font-bold hidden">
-        編集をキャンセル
-      </button>
+        <button id="cancelEditBtn" class="w-40 rounded-xl bg-slate-500 text-white py-3 font-bold hidden">
+          編集をキャンセル
+        </button>
+      </div>
     </div>
   </section>
 
@@ -148,52 +158,60 @@
   <section class="bg-white rounded-2xl shadow p-4">
     <div class="flex gap-2 mb-4">
       <button id="historyTab" class="flex-1 rounded-xl bg-blue-600 text-white py-3 font-bold">入出庫の履歴</button>
-      <button id="stockTab" class="flex-1 rounded-xl bg-slate-200 text-slate-700 py-3 font-bold">在庫一覧</button>
+      <button id="stockTab" class="flex-1 rounded-xl bg-slate-200 text-slate-700 py-3 font-bold">在庫管理表</button>
     </div>
 
     <button id="exportBtn" class="w-full rounded-xl bg-emerald-600 text-white py-3 font-bold mb-4">
       出力
     </button>
 
-    <div id="historyArea" class="overflow-x-auto">
-      <table class="w-full text-sm">
-        <thead class="bg-slate-100">
-          <tr>
-            <th class="p-2 text-left">日付</th>
-            <th class="p-2 text-left">カテゴリ</th>
-            <th class="p-2 text-left">メーカー名</th>
-            <th class="p-2 text-left">型式</th>
-            <th class="p-2 text-left">区分</th>
-            <th class="p-2 text-left">状態</th>
-            <th class="p-2 text-right">数量</th>
-            <th class="p-2 text-left">顧客名</th>
-            <th class="p-2 text-center">操作</th>
-          </tr>
-        </thead>
-        <tbody id="historyBody"></tbody>
-      </table>
+    <div id="historyArea">
+      <div id="historyCards" class="grid gap-3 md:hidden"></div>
+
+      <div class="hidden md:block overflow-x-auto">
+        <table class="w-full text-sm">
+          <thead class="bg-slate-100">
+            <tr>
+              <th class="p-2 text-left">日付</th>
+              <th class="p-2 text-left">カテゴリ</th>
+              <th class="p-2 text-left">メーカー名</th>
+              <th class="p-2 text-left">型式</th>
+              <th class="p-2 text-left">区分</th>
+              <th class="p-2 text-left">状態</th>
+              <th class="p-2 text-right">数量</th>
+              <th class="p-2 text-left">顧客名</th>
+              <th class="p-2 text-center">操作</th>
+            </tr>
+          </thead>
+          <tbody id="historyBody"></tbody>
+        </table>
+      </div>
     </div>
 
-    <div id="stockArea" class="hidden overflow-x-auto">
-      <table class="w-full text-sm">
-        <thead class="bg-slate-100">
-          <tr>
-            <th class="p-2 text-left">カテゴリ</th>
-            <th class="p-2 text-left">メーカー名</th>
-            <th class="p-2 text-left">型式</th>
-            <th class="p-2 text-right">新品在庫数</th>
-            <th class="p-2 text-right">中古在庫数</th>
-            <th class="p-2 text-right">総在庫数</th>
-          </tr>
-        </thead>
-        <tbody id="stockBody"></tbody>
-      </table>
+    <div id="stockArea" class="hidden">
+      <div id="stockCards" class="grid gap-3 md:hidden"></div>
+
+      <div class="hidden md:block overflow-x-auto">
+        <table class="w-full text-sm">
+          <thead class="bg-slate-100">
+            <tr>
+              <th class="p-2 text-left">カテゴリ</th>
+              <th class="p-2 text-left">メーカー名</th>
+              <th class="p-2 text-left">型式</th>
+              <th class="p-2 text-right">新品在庫数</th>
+              <th class="p-2 text-right">中古在庫数</th>
+              <th class="p-2 text-right">総在庫数</th>
+            </tr>
+          </thead>
+          <tbody id="stockBody"></tbody>
+        </table>
+      </div>
     </div>
   </section>
 </main>
 
 <script>
-const RECORD_KEY = "inventory_records_v4";
+const RECORD_KEY = "inventory_records_v6";
 const PRODUCT_KEY = "inventory_products_v2";
 const CATEGORY_KEY = "inventory_categories_v1";
 
@@ -211,6 +229,15 @@ let html5QrCode = null;
 let isScanning = false;
 
 const $ = id => document.getElementById(id);
+
+function setItemCode(value) {
+  document.getElementById("itemCode").value = value;
+}
+
+function onScanSuccess(decodedText, decodedResult) {
+  document.getElementById("itemCode").value = decodedText;
+  console.log("読み取り成功:", decodedText, decodedResult);
+}
 
 function saveRecords() {
   localStorage.setItem(RECORD_KEY, JSON.stringify(records));
@@ -282,10 +309,10 @@ function addCategory(category) {
 function resetForm() {
   $("editingId").value = "";
   $("formTitle").textContent = "在庫登録";
-  $("registerBtn").textContent = "在庫管理表へ反映させる";
+  $("registerBtn").textContent = "登録";
   $("cancelEditBtn").classList.add("hidden");
 
-  $("codeInput").value = "";
+  $("itemCode").value = "";
   $("typeSelect").value = "入庫";
   $("conditionSelect").value = "新品";
   $("quantityInput").value = 1;
@@ -347,10 +374,14 @@ function renderProducts() {
 
 function renderHistory() {
   const body = $("historyBody");
+  const cards = $("historyCards");
+
   body.innerHTML = "";
+  cards.innerHTML = "";
 
   if (records.length === 0) {
     body.innerHTML = `<tr><td colspan="9" class="p-4 text-center text-slate-400">履歴はまだありません</td></tr>`;
+    cards.innerHTML = `<div class="p-4 text-center text-slate-400 border rounded-xl">履歴はまだありません</div>`;
     return;
   }
 
@@ -373,16 +404,43 @@ function renderHistory() {
         </td>
       </tr>
     `;
+
+    cards.innerHTML += `
+      <div class="rounded-xl border border-slate-200 p-3 bg-white">
+        <div class="flex justify-between gap-3 mb-2">
+          <div class="font-bold text-base">${escapeHtml(r.code)}</div>
+          <div class="text-xs text-slate-500">${escapeHtml(r.date)}</div>
+        </div>
+
+        <div class="grid grid-cols-2 gap-2 text-sm">
+          <div><span class="text-slate-400">カテゴリ</span><br>${escapeHtml(info.category || "-")}</div>
+          <div><span class="text-slate-400">メーカー</span><br>${escapeHtml(info.maker || "-")}</div>
+          <div><span class="text-slate-400">区分</span><br>${escapeHtml(r.type)}</div>
+          <div><span class="text-slate-400">状態</span><br>${escapeHtml(r.condition)}</div>
+          <div><span class="text-slate-400">数量</span><br>${r.quantity}</div>
+          <div><span class="text-slate-400">顧客名</span><br>${escapeHtml(r.customerName || "-")}</div>
+        </div>
+
+        <div class="flex gap-2 mt-3">
+          <button onclick="editRecord('${r.id}')" class="flex-1 rounded-lg bg-blue-600 text-white py-2 text-sm font-bold">編集</button>
+          <button onclick="deleteRecord('${r.id}')" class="flex-1 rounded-lg bg-red-600 text-white py-2 text-sm font-bold">削除</button>
+        </div>
+      </div>
+    `;
   });
 }
 
 function renderStock() {
   const body = $("stockBody");
+  const cards = $("stockCards");
   const stocks = getStockList();
+
   body.innerHTML = "";
+  cards.innerHTML = "";
 
   if (stocks.length === 0) {
     body.innerHTML = `<tr><td colspan="6" class="p-4 text-center text-slate-400">在庫はまだありません</td></tr>`;
+    cards.innerHTML = `<div class="p-4 text-center text-slate-400 border rounded-xl">在庫はまだありません</div>`;
     return;
   }
 
@@ -396,6 +454,32 @@ function renderStock() {
         <td class="p-2 text-right">${s.usedStock}</td>
         <td class="p-2 text-right font-bold">${s.total}</td>
       </tr>
+    `;
+
+    cards.innerHTML += `
+      <div class="rounded-xl border border-slate-200 p-3 bg-white">
+        <div class="font-bold text-base mb-2">${escapeHtml(s.code)}</div>
+
+        <div class="grid grid-cols-2 gap-2 text-sm mb-3">
+          <div><span class="text-slate-400">カテゴリ</span><br>${escapeHtml(s.category || "-")}</div>
+          <div><span class="text-slate-400">メーカー</span><br>${escapeHtml(s.maker || "-")}</div>
+        </div>
+
+        <div class="grid grid-cols-3 gap-2 text-center">
+          <div class="rounded-lg bg-slate-100 p-2">
+            <div class="text-xs text-slate-500">新品</div>
+            <div class="font-bold">${s.newStock}</div>
+          </div>
+          <div class="rounded-lg bg-slate-100 p-2">
+            <div class="text-xs text-slate-500">中古</div>
+            <div class="font-bold">${s.usedStock}</div>
+          </div>
+          <div class="rounded-lg bg-blue-100 p-2">
+            <div class="text-xs text-blue-600">総数</div>
+            <div class="font-bold text-blue-700">${s.total}</div>
+          </div>
+        </div>
+      </div>
     `;
   });
 }
@@ -474,112 +558,8 @@ function deleteProduct(id) {
   renderAll();
 }
 
-function parseCSV(text) {
-  const rows = [];
-  let row = [];
-  let value = "";
-  let inQuotes = false;
-
-  text = text.replace(/^\uFEFF/, "");
-
-  for (let i = 0; i < text.length; i++) {
-    const char = text[i];
-    const nextChar = text[i + 1];
-
-    if (char === '"' && inQuotes && nextChar === '"') {
-      value += '"';
-      i++;
-    } else if (char === '"') {
-      inQuotes = !inQuotes;
-    } else if (char === "," && !inQuotes) {
-      row.push(value.trim());
-      value = "";
-    } else if ((char === "\n" || char === "\r") && !inQuotes) {
-      if (char === "\r" && nextChar === "\n") i++;
-      row.push(value.trim());
-      if (row.some(cell => cell !== "")) rows.push(row);
-      row = [];
-      value = "";
-    } else {
-      value += char;
-    }
-  }
-
-  row.push(value.trim());
-  if (row.some(cell => cell !== "")) rows.push(row);
-
-  return rows.map(row =>
-    row.map(cell => cell.replace(/^\uFEFF/, "").replace(/^"|"$/g, ""))
-  );
-}
-
-function hasGarbledText(text) {
-  const replacementCount = (text.match(/ /g) || []).length;
-  const mojibakeCount = (text.match(/[縺蜷荳譁驥]/g) || []).length;
-  return replacementCount > 0 || mojibakeCount > 5;
-}
-
-async function readCsvFile(file) {
-  const buffer = await file.arrayBuffer();
-  const utf8Text = new TextDecoder("utf-8", { fatal: false }).decode(buffer);
-
-  if (!hasGarbledText(utf8Text)) {
-    return utf8Text;
-  }
-
-  try {
-    return new TextDecoder("shift_jis", { fatal: false }).decode(buffer);
-  } catch {
-    return utf8Text;
-  }
-}
-
-$("csvInput").addEventListener("change", async event => {
-  const file = event.target.files[0];
-  if (!file) return;
-
-  try {
-    const text = await readCsvFile(file);
-    const rows = parseCSV(text);
-
-    if (rows.length === 0) {
-      alert("CSVファイルに読み込めるデータがありません。");
-      return;
-    }
-
-    const first = rows[0].join(",");
-    const hasHeader =
-      first.includes("カテゴリ") ||
-      first.includes("メーカー") ||
-      first.includes("型式");
-
-    const dataRows = hasHeader ? rows.slice(1) : rows;
-    let importCount = 0;
-
-    dataRows.forEach(row => {
-      const [category, maker, model] = row;
-
-      if (category && model) {
-        addOrUpdateProduct(category, maker || "", model);
-        importCount++;
-      }
-    });
-
-    saveProducts();
-    saveCategories();
-    renderAll();
-
-    alert(`${importCount}件の商品一覧を読み込みました。`);
-  } catch (error) {
-    alert("CSVファイルの読み込みに失敗しました。");
-    console.error(error);
-  } finally {
-    event.target.value = "";
-  }
-});
-
 $("registerBtn").addEventListener("click", () => {
-  const code = $("codeInput").value.trim();
+  const code = $("itemCode").value.trim();
   const type = $("typeSelect").value;
   const condition = $("conditionSelect").value;
   const quantity = Number($("quantityInput").value);
@@ -626,14 +606,14 @@ function editRecord(id) {
   if (!r) return;
 
   $("editingId").value = r.id;
-  $("codeInput").value = r.code;
+  $("itemCode").value = r.code;
   $("typeSelect").value = r.type;
   $("conditionSelect").value = r.condition;
   $("quantityInput").value = r.quantity;
   $("customerInput").value = r.customerName || "";
 
   $("formTitle").textContent = "履歴を編集";
-  $("registerBtn").textContent = "編集内容を保存";
+  $("registerBtn").textContent = "保存";
   $("cancelEditBtn").classList.remove("hidden");
 
   updateCustomerField();
@@ -684,7 +664,7 @@ function exportStock() {
     ...getStockList().map(s => [s.category, s.maker, s.code, s.newStock, s.usedStock, s.total])
   ];
 
-  downloadCSV("在庫一覧.csv", rows);
+  downloadCSV("在庫管理表.csv", rows);
 }
 
 $("exportBtn").addEventListener("click", () => {
@@ -738,16 +718,42 @@ $("startScanBtn").addEventListener("click", async () => {
           Html5QrcodeSupportedFormats.QR_CODE
         ]
       },
-      decodedText => {
-        $("codeInput").value = decodedText;
-        stopScanner();
-      }
+      onScanSuccess,
+      errorMessage => {}
     );
 
     isScanning = true;
   } catch {
     alert("カメラを起動できませんでした。手入力をご利用ください。");
     stopScanner();
+  }
+});
+
+$("takePhotoBtn").addEventListener("click", () => {
+  $("photoInput").click();
+});
+
+$("photoInput").addEventListener("change", async event => {
+  const file = event.target.files[0];
+  if (!file) return;
+
+  const imageScanner = new Html5Qrcode("reader");
+
+  try {
+    $("readerWrapper").classList.remove("hidden");
+
+    const decodedText = await imageScanner.scanFile(file, true);
+    document.getElementById("itemCode").value = decodedText;
+    alert("バーコードを読み取りました。");
+  } catch (error) {
+    alert("写真からバーコードを読み取れませんでした。バーコードが大きく写るように撮影してください。");
+    console.error(error);
+  } finally {
+    try {
+      await imageScanner.clear();
+    } catch {}
+    $("readerWrapper").classList.add("hidden");
+    event.target.value = "";
   }
 });
 
