@@ -3,14 +3,12 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-
   <title>CONNECT 在庫管理システム</title>
 
   <meta name="application-name" content="CONNECT 在庫管理" />
   <meta name="apple-mobile-web-app-title" content="CONNECT" />
   <meta name="mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
-  <meta name="apple-mobile-web-app-status-bar-style" content="default" />
   <meta name="theme-color" content="#2563eb" />
 
   <link rel="icon" href="./icon.png" />
@@ -31,7 +29,7 @@
 <main class="max-w-6xl mx-auto p-4 pb-24">
   <header class="mb-5">
     <h1 class="text-2xl font-bold">CONNECT 在庫管理システム</h1>
-    <p class="text-sm text-slate-500 mt-1">バーコード読み取り・商品一覧・CSV出力対応</p>
+    <p class="text-sm text-slate-500 mt-1">JANコード読み取り・商品一覧・CSV出力対応</p>
   </header>
 
   <section class="bg-white rounded-2xl shadow p-4 mb-5">
@@ -62,6 +60,9 @@
       <input id="photoInput" type="file" accept="image/*" capture="environment" class="hidden" />
 
       <div id="readerWrapper" class="hidden">
+        <p class="text-xs text-slate-500 mb-2">
+          JANコードを横長の枠内に合わせてください。
+        </p>
         <div id="reader" class="rounded-xl overflow-hidden border"></div>
       </div>
 
@@ -136,7 +137,7 @@
         class="w-full rounded-xl border px-4 py-3 bg-white mb-2" />
 
       <p class="text-xs text-slate-500 mb-4">
-        CSV形式：カテゴリ,メーカー名,型式 ／ ExcelのCSVにも対応
+        CSV形式：カテゴリ,メーカー名,型式
       </p>
 
       <div class="overflow-x-auto">
@@ -211,7 +212,7 @@
 </main>
 
 <script>
-const RECORD_KEY = "inventory_records_v6";
+const RECORD_KEY = "inventory_records_v7";
 const PRODUCT_KEY = "inventory_products_v2";
 const CATEGORY_KEY = "inventory_categories_v1";
 
@@ -230,13 +231,9 @@ let isScanning = false;
 
 const $ = id => document.getElementById(id);
 
-function setItemCode(value) {
-  document.getElementById("itemCode").value = value;
-}
-
 function onScanSuccess(decodedText, decodedResult) {
   document.getElementById("itemCode").value = decodedText;
-  console.log("読み取り成功:", decodedText, decodedResult);
+  console.log("JANコード読み取り成功:", decodedText, decodedResult);
 }
 
 function saveRecords() {
@@ -411,7 +408,6 @@ function renderHistory() {
           <div class="font-bold text-base">${escapeHtml(r.code)}</div>
           <div class="text-xs text-slate-500">${escapeHtml(r.date)}</div>
         </div>
-
         <div class="grid grid-cols-2 gap-2 text-sm">
           <div><span class="text-slate-400">カテゴリ</span><br>${escapeHtml(info.category || "-")}</div>
           <div><span class="text-slate-400">メーカー</span><br>${escapeHtml(info.maker || "-")}</div>
@@ -420,7 +416,6 @@ function renderHistory() {
           <div><span class="text-slate-400">数量</span><br>${r.quantity}</div>
           <div><span class="text-slate-400">顧客名</span><br>${escapeHtml(r.customerName || "-")}</div>
         </div>
-
         <div class="flex gap-2 mt-3">
           <button onclick="editRecord('${r.id}')" class="flex-1 rounded-lg bg-blue-600 text-white py-2 text-sm font-bold">編集</button>
           <button onclick="deleteRecord('${r.id}')" class="flex-1 rounded-lg bg-red-600 text-white py-2 text-sm font-bold">削除</button>
@@ -459,12 +454,10 @@ function renderStock() {
     cards.innerHTML += `
       <div class="rounded-xl border border-slate-200 p-3 bg-white">
         <div class="font-bold text-base mb-2">${escapeHtml(s.code)}</div>
-
         <div class="grid grid-cols-2 gap-2 text-sm mb-3">
           <div><span class="text-slate-400">カテゴリ</span><br>${escapeHtml(s.category || "-")}</div>
           <div><span class="text-slate-400">メーカー</span><br>${escapeHtml(s.maker || "-")}</div>
         </div>
-
         <div class="grid grid-cols-3 gap-2 text-center">
           <div class="rounded-lg bg-slate-100 p-2">
             <div class="text-xs text-slate-500">新品</div>
@@ -512,7 +505,6 @@ function addOrUpdateProduct(category, maker, model) {
 $("productAccordionBtn").addEventListener("click", () => {
   const content = $("productAccordionContent");
   const isClosed = content.classList.contains("hidden");
-
   content.classList.toggle("hidden", !isClosed);
   $("productAccordionIcon").textContent = isClosed ? "▲" : "▼";
 });
@@ -552,7 +544,6 @@ $("addProductBtn").addEventListener("click", () => {
 
 function deleteProduct(id) {
   if (!confirm("この商品を商品一覧から削除しますか？")) return;
-
   products = products.filter(p => p.id !== id);
   saveProducts();
   renderAll();
@@ -622,7 +613,6 @@ function editRecord(id) {
 
 function deleteRecord(id) {
   if (!confirm("この履歴を削除しますか？")) return;
-
   records = records.filter(r => r.id !== id);
   saveRecords();
   renderAll();
@@ -654,7 +644,6 @@ function exportHistory() {
       return [r.date, info.category, info.maker, r.code, r.type, r.condition, r.quantity, r.customerName];
     })
   ];
-
   downloadCSV("入出庫履歴.csv", rows);
 }
 
@@ -663,7 +652,6 @@ function exportStock() {
     ["カテゴリ", "メーカー名", "型式", "新品在庫数", "中古在庫数", "総在庫数"],
     ...getStockList().map(s => [s.category, s.maker, s.code, s.newStock, s.usedStock, s.total])
   ];
-
   downloadCSV("在庫管理表.csv", rows);
 }
 
@@ -673,20 +661,16 @@ $("exportBtn").addEventListener("click", () => {
 
 $("historyTab").addEventListener("click", () => {
   activeTab = "history";
-
   $("historyArea").classList.remove("hidden");
   $("stockArea").classList.add("hidden");
-
   $("historyTab").className = "flex-1 rounded-xl bg-blue-600 text-white py-3 font-bold";
   $("stockTab").className = "flex-1 rounded-xl bg-slate-200 text-slate-700 py-3 font-bold";
 });
 
 $("stockTab").addEventListener("click", () => {
   activeTab = "stock";
-
   $("stockArea").classList.remove("hidden");
   $("historyArea").classList.add("hidden");
-
   $("stockTab").className = "flex-1 rounded-xl bg-blue-600 text-white py-3 font-bold";
   $("historyTab").className = "flex-1 rounded-xl bg-slate-200 text-slate-700 py-3 font-bold";
 });
@@ -702,29 +686,63 @@ $("startScanBtn").addEventListener("click", async () => {
 
   html5QrCode = new Html5Qrcode("reader");
 
+  const cameraConfig = {
+    facingMode: "environment",
+    focusMode: "continuous",
+    width: { ideal: 1280 },
+    height: { ideal: 720 },
+    advanced: [
+      { focusMode: "continuous" },
+      { exposureMode: "continuous" }
+    ]
+  };
+
+  const scanConfig = {
+    fps: 15,
+    qrbox: {
+      width: 250,
+      height: 100
+    },
+    aspectRatio: 1.777,
+    disableFlip: true,
+    formatsToSupport: [
+      Html5QrcodeSupportedFormats.EAN_13,
+      Html5QrcodeSupportedFormats.EAN_8
+    ],
+    experimentalFeatures: {
+      useBarCodeDetectorIfSupported: true
+    }
+  };
+
   try {
     await html5QrCode.start(
-      { facingMode: "environment" },
-      {
-        fps: 10,
-        qrbox: { width: 250, height: 250 },
-        formatsToSupport: [
-          Html5QrcodeSupportedFormats.EAN_13,
-          Html5QrcodeSupportedFormats.EAN_8,
-          Html5QrcodeSupportedFormats.CODE_128,
-          Html5QrcodeSupportedFormats.CODE_39,
-          Html5QrcodeSupportedFormats.UPC_A,
-          Html5QrcodeSupportedFormats.UPC_E,
-          Html5QrcodeSupportedFormats.QR_CODE
-        ]
-      },
+      cameraConfig,
+      scanConfig,
       onScanSuccess,
       errorMessage => {}
     );
 
     isScanning = true;
-  } catch {
+
+    try {
+      const video = document.querySelector("#reader video");
+      if (video && video.srcObject) {
+        const track = video.srcObject.getVideoTracks()[0];
+        const capabilities = track.getCapabilities ? track.getCapabilities() : {};
+
+        if (track.applyConstraints && capabilities.focusMode) {
+          await track.applyConstraints({
+            advanced: [{ focusMode: "continuous" }]
+          });
+        }
+      }
+    } catch (focusError) {
+      console.log("オートフォーカス設定はこの端末では未対応です。", focusError);
+    }
+
+  } catch (error) {
     alert("カメラを起動できませんでした。手入力をご利用ください。");
+    console.error(error);
     stopScanner();
   }
 });
@@ -742,11 +760,11 @@ $("photoInput").addEventListener("change", async event => {
   try {
     $("readerWrapper").classList.remove("hidden");
 
-    const decodedText = await imageScanner.scanFile(file, true);
-    document.getElementById("itemCode").value = decodedText;
-    alert("バーコードを読み取りました。");
+    const decodedText = await imageScanner.scanFileV2(file, true);
+    document.getElementById("itemCode").value = decodedText.decodedText || decodedText;
+    alert("JANコードを読み取りました。");
   } catch (error) {
-    alert("写真からバーコードを読み取れませんでした。バーコードが大きく写るように撮影してください。");
+    alert("写真からJANコードを読み取れませんでした。バーコードを大きく、明るく撮影してください。");
     console.error(error);
   } finally {
     try {
