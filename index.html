@@ -1,440 +1,891 @@
 <!DOCTYPE html>
 <html lang="ja">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
   <title>CONNECT 在庫管理システム</title>
 
-  <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+  <meta name="application-name" content="CONNECT 在庫管理" />
+  <meta name="apple-mobile-web-app-title" content="CONNECT" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+  <meta name="theme-color" content="#2563eb" />
+
+  <link rel="icon" href="./icon.png" />
+  <link rel="apple-touch-icon" href="./icon.png" />
+
+  <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+
+  <style>
+    html, body {
+      overscroll-behavior: none;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    #reader video {
+      width: 100% !important;
+      border-radius: 12px;
+    }
+  </style>
 </head>
 
-<body class="bg-gray-100 min-h-screen p-4 font-sans">
-  <div class="max-w-4xl mx-auto space-y-6">
-    <div class="text-center">
-      <h1 class="text-2xl font-bold text-gray-800">CONNECT 在庫管理システム</h1>
-      <p class="text-sm text-gray-500 mt-1">JANコード読み取り・商品一覧・CSV出力対応</p>
+<body class="bg-slate-100 text-slate-800">
+<main class="max-w-6xl mx-auto p-4 pb-24">
+  <header class="mb-5">
+    <h1 class="text-2xl font-bold">CONNECT 在庫管理システム</h1>
+    <p class="text-sm text-slate-500 mt-1">JANコード読み取り・商品一覧・CSV出力対応</p>
+  </header>
+
+  <section class="bg-white rounded-2xl shadow p-4 mb-5">
+    <h2 id="formTitle" class="text-lg font-bold mb-4">在庫登録</h2>
+    <input id="editingId" type="hidden" />
+
+    <div class="grid gap-4">
+      <div>
+        <label class="block text-sm font-semibold mb-1">型式 / バーコード</label>
+        <input id="itemCode" type="text" placeholder="型式またはJANコード"
+          class="w-full rounded-xl border px-4 py-3 text-base" />
+      </div>
+
+      <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+        <button id="startScanBtn" class="rounded-xl bg-blue-600 text-white py-3 font-bold">
+          カメラで読み取る
+        </button>
+
+        <button id="takePhotoBtn" class="rounded-xl bg-indigo-600 text-white py-3 font-bold">
+          カメラで写真を撮る
+        </button>
+
+        <button id="stopScanBtn" class="rounded-xl bg-slate-600 text-white py-3 font-bold hidden">
+          読み取り停止
+        </button>
+      </div>
+
+      <input id="photoInput" type="file" accept="image/*" capture="environment" class="hidden" />
+
+      <div id="readerWrapper" class="hidden">
+        <p id="cameraStatus" class="text-xs text-slate-500 mb-2">
+          JANコードを横長の枠内に合わせてください。
+        </p>
+        <div id="reader" class="rounded-xl overflow-hidden border"></div>
+      </div>
+
+      <div class="grid grid-cols-2 gap-3">
+        <div>
+          <label class="block text-sm font-semibold mb-1">入出区分</label>
+          <select id="typeSelect" class="w-full rounded-xl border px-4 py-3 bg-white">
+            <option value="入庫">入庫（在庫を追加）</option>
+            <option value="出庫">出庫（在庫を減らす）</option>
+          </select>
+        </div>
+
+        <div>
+          <label class="block text-sm font-semibold mb-1">状態</label>
+          <select id="conditionSelect" class="w-full rounded-xl border px-4 py-3 bg-white">
+            <option value="新品">新品</option>
+            <option value="中古">中古</option>
+          </select>
+        </div>
+      </div>
+
+      <div>
+        <label class="block text-sm font-semibold mb-1">数量</label>
+        <input id="quantityInput" type="number" min="1" value="1"
+          class="w-full rounded-xl border px-4 py-3 text-base" />
+      </div>
+
+      <div id="customerField" class="hidden">
+        <label class="block text-sm font-semibold mb-1">顧客名 / 案件名</label>
+        <input id="customerInput" type="text" class="w-full rounded-xl border px-4 py-3 text-base" />
+      </div>
+
+      <div class="flex gap-3">
+        <button id="registerBtn" class="w-32 rounded-xl bg-emerald-600 text-white py-3 font-bold">
+          登録
+        </button>
+
+        <button id="cancelEditBtn" class="w-40 rounded-xl bg-slate-500 text-white py-3 font-bold hidden">
+          編集をキャンセル
+        </button>
+      </div>
     </div>
+  </section>
 
-    <div class="bg-white p-6 rounded-lg shadow-md">
-      <h2 class="text-lg font-semibold mb-4 text-gray-700">バーコード・型式入力</h2>
+  <section class="bg-white rounded-2xl shadow p-4 mb-5">
+    <button id="productAccordionBtn"
+      class="w-full flex items-center justify-between rounded-xl bg-indigo-600 text-white py-3 px-4 font-bold">
+      <span>商品一覧</span>
+      <span id="productAccordionIcon">▼</span>
+    </button>
 
-      <div id="reader" class="w-full max-w-sm mx-auto mb-4 border border-gray-300 rounded overflow-hidden bg-black" style="min-height:250px;"></div>
+    <div id="productAccordionContent" class="hidden mt-4">
+      <div class="grid md:grid-cols-3 gap-3 mb-3">
+        <select id="categoryInput" class="rounded-xl border px-4 py-3 bg-white"></select>
+        <input id="makerInput" placeholder="メーカー名" class="rounded-xl border px-4 py-3" />
+        <input id="modelInput" placeholder="型式 / バーコード" class="rounded-xl border px-4 py-3" />
+      </div>
 
-      <p id="scanStatus" class="text-center text-sm text-gray-500 mb-4">
-        カメラ起動中です。JANコードをカメラにかざしてください。
+      <div class="grid md:grid-cols-2 gap-3 mb-3">
+        <input id="newCategoryInput" placeholder="追加するカテゴリ名" class="rounded-xl border px-4 py-3" />
+        <button id="addCategoryBtn" class="rounded-xl bg-slate-700 text-white py-3 font-bold">
+          カテゴリを追加
+        </button>
+      </div>
+
+      <button id="addProductBtn" class="w-full rounded-xl bg-indigo-600 text-white py-3 font-bold mb-3">
+        商品一覧に登録
+      </button>
+
+      <label class="block text-sm font-semibold mb-1">CSVファイル読み込み</label>
+      <input id="csvInput" type="file" accept=".csv,text/csv"
+        class="w-full rounded-xl border px-4 py-3 bg-white mb-2" />
+
+      <p class="text-xs text-slate-500 mb-4">
+        CSV形式：カテゴリ,メーカー名,型式
       </p>
 
-      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div>
-          <label class="block text-sm font-medium text-gray-600">型式 / バーコード</label>
-          <input type="text" id="itemCode" class="mt-1 block w-full rounded border-gray-300 p-2 border" placeholder="型式またはJANコード">
-        </div>
-
-        <div>
-          <label class="block text-sm font-medium text-gray-600">商品名</label>
-          <input type="text" id="itemName" class="mt-1 block w-full rounded border-gray-300 p-2 border" placeholder="例: サンプル商品A">
-        </div>
-      </div>
-    </div>
-
-    <div class="bg-white p-6 rounded-lg shadow-md">
-      <h2 class="text-lg font-semibold mb-4 text-gray-700">入出庫情報の入力</h2>
-
-      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div>
-          <label class="block text-sm font-medium text-gray-600">入出区分</label>
-          <select id="actionType" onchange="toggleClientField()" class="mt-1 block w-full rounded border-gray-300 p-2 border bg-white">
-            <option value="入庫">📥 入庫（在庫を追加）</option>
-            <option value="出庫">📤 出庫（在庫を減らす）</option>
-          </select>
-        </div>
-
-        <div>
-          <label class="block text-sm font-medium text-gray-600">状態</label>
-          <select id="itemStatus" class="mt-1 block w-full rounded border-gray-300 p-2 border bg-white">
-            <option value="新品">✨ 新品</option>
-            <option value="中古">🛠️ 中古</option>
-          </select>
-        </div>
-
-        <div>
-          <label class="block text-sm font-medium text-gray-600">数量</label>
-          <input type="number" id="itemQty" min="1" value="1" class="mt-1 block w-full rounded border-gray-300 p-2 border">
-        </div>
-
-        <div id="clientField" class="hidden">
-          <label class="block text-sm font-medium text-gray-600">顧客名（案件名）</label>
-          <input type="text" id="clientName" class="mt-1 block w-full rounded border-gray-300 p-2 border" placeholder="例: 〇〇株式会社様">
-        </div>
-      </div>
-
-      <button onclick="registerStock()" class="mt-6 w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3 px-4 rounded transition shadow-sm">
-        在庫管理表へ反映させる
-      </button>
-    </div>
-
-    <div class="bg-white p-6 rounded-lg shadow-md">
-      <div class="flex border-b border-gray-200 mb-4">
-        <button onclick="switchTab('tab1')" id="btn-tab1" class="py-2 px-4 font-semibold border-b-2 border-blue-600 text-blue-600">
-          🕒 入出庫の履歴
-        </button>
-        <button onclick="switchTab('tab2')" id="btn-tab2" class="py-2 px-4 font-semibold border-b-2 border-transparent text-gray-500 hover:text-blue-600">
-          📊 現在の在庫一覧
-        </button>
-      </div>
-
-      <div class="mb-4 text-right">
-        <button onclick="downloadStockCsv()" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded">
-          在庫一覧をCSV出力
-        </button>
-      </div>
-
-      <div id="tab1" class="overflow-x-auto">
-        <table class="min-w-full text-sm text-left text-gray-500">
-          <thead class="text-xs text-gray-700 uppercase bg-gray-50">
+      <div class="overflow-x-auto">
+        <table class="w-full text-sm">
+          <thead class="bg-slate-100">
             <tr>
-              <th class="py-3 px-4">日付</th>
-              <th class="py-3 px-4">型式</th>
-              <th class="py-3 px-4">商品名</th>
-              <th class="py-3 px-4">区分</th>
-              <th class="py-3 px-4">状態</th>
-              <th class="py-3 px-4 text-right">数量</th>
-              <th class="py-3 px-4">顧客名</th>
+              <th class="p-2 text-left">カテゴリ</th>
+              <th class="p-2 text-left">メーカー名</th>
+              <th class="p-2 text-left">型式</th>
+              <th class="p-2 text-center">操作</th>
             </tr>
           </thead>
-          <tbody id="logTableBody" class="divide-y divide-gray-200"></tbody>
-        </table>
-      </div>
-
-      <div id="tab2" class="overflow-x-auto hidden">
-        <table class="min-w-full text-sm text-left text-gray-500">
-          <thead class="text-xs text-gray-700 uppercase bg-gray-50">
-            <tr>
-              <th class="py-3 px-4">型式</th>
-              <th class="py-3 px-4">商品名</th>
-              <th class="py-3 px-4 text-right">新品在庫数</th>
-              <th class="py-3 px-4 text-right">中古在庫数</th>
-              <th class="py-3 px-4 text-right">総在庫数</th>
-            </tr>
-          </thead>
-          <tbody id="stockTableBody" class="divide-y divide-gray-200"></tbody>
+          <tbody id="productBody"></tbody>
         </table>
       </div>
     </div>
-  </div>
+  </section>
+
+  <section class="bg-white rounded-2xl shadow p-4">
+    <div class="flex gap-2 mb-4">
+      <button id="historyTab" class="flex-1 rounded-xl bg-blue-600 text-white py-3 font-bold">入出庫の履歴</button>
+      <button id="stockTab" class="flex-1 rounded-xl bg-slate-200 text-slate-700 py-3 font-bold">在庫管理表</button>
+    </div>
+
+    <button id="exportBtn" class="w-full rounded-xl bg-emerald-600 text-white py-3 font-bold mb-4">
+      出力
+    </button>
+
+    <div id="historyArea">
+      <div id="historyCards" class="grid gap-3 md:hidden"></div>
+
+      <div class="hidden md:block overflow-x-auto">
+        <table class="w-full text-sm">
+          <thead class="bg-slate-100">
+            <tr>
+              <th class="p-2 text-left">日付</th>
+              <th class="p-2 text-left">カテゴリ</th>
+              <th class="p-2 text-left">メーカー名</th>
+              <th class="p-2 text-left">型式</th>
+              <th class="p-2 text-left">区分</th>
+              <th class="p-2 text-left">状態</th>
+              <th class="p-2 text-right">数量</th>
+              <th class="p-2 text-left">顧客名</th>
+              <th class="p-2 text-center">操作</th>
+            </tr>
+          </thead>
+          <tbody id="historyBody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <div id="stockArea" class="hidden">
+      <div id="stockCards" class="grid gap-3 md:hidden"></div>
+
+      <div class="hidden md:block overflow-x-auto">
+        <table class="w-full text-sm">
+          <thead class="bg-slate-100">
+            <tr>
+              <th class="p-2 text-left">カテゴリ</th>
+              <th class="p-2 text-left">メーカー名</th>
+              <th class="p-2 text-left">型式</th>
+              <th class="p-2 text-right">新品在庫数</th>
+              <th class="p-2 text-right">中古在庫数</th>
+              <th class="p-2 text-right">総在庫数</th>
+            </tr>
+          </thead>
+          <tbody id="stockBody"></tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+</main>
 
 <script>
-  const STORAGE_KEY = "connect_inventory_records_v1";
+const RECORD_KEY = "inventory_records_v8";
+const PRODUCT_KEY = "inventory_products_v2";
+const CATEGORY_KEY = "inventory_categories_v1";
 
-  let records = JSON.parse(localStorage.getItem(STORAGE_KEY) || "[]");
-  let html5QrCode = null;
-  let lastScannedCode = "";
+const DEFAULT_CATEGORIES = [
+  "HUB", "ルーター", "AP", "カメラ", "wi-fi", "電話機",
+  "PoEインジェクター", "PBX関連", "その他備品"
+];
 
-  function saveRecords() {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(records));
+let records = JSON.parse(localStorage.getItem(RECORD_KEY) || "[]");
+let products = JSON.parse(localStorage.getItem(PRODUCT_KEY) || "[]");
+let categories = JSON.parse(localStorage.getItem(CATEGORY_KEY) || JSON.stringify(DEFAULT_CATEGORIES));
+let activeTab = "history";
+
+let html5QrCode = null;
+let isScanning = false;
+
+const $ = id => document.getElementById(id);
+
+function getJanFormatsToSupport() {
+  if (typeof Html5QrcodeSupportedFormats !== "undefined") {
+    return [
+      Html5QrcodeSupportedFormats.EAN_13,
+      Html5QrcodeSupportedFormats.EAN_8
+    ];
   }
 
-  function escapeHtml(value) {
-    return String(value || "")
-      .replaceAll("&", "&amp;")
-      .replaceAll("<", "&lt;")
-      .replaceAll(">", "&gt;")
-      .replaceAll('"', "&quot;")
-      .replaceAll("'", "&#039;");
+  return null;
+}
+
+function onScanSuccess(decodedText, decodedResult) {
+  document.getElementById("itemCode").value = decodedText;
+  $("cameraStatus").textContent = `読み取り成功：${decodedText}`;
+  console.log("JAN読取成功:", decodedText, decodedResult);
+}
+
+function onScanFailure(errorMessage) {
+}
+
+function saveRecords() {
+  localStorage.setItem(RECORD_KEY, JSON.stringify(records));
+}
+
+function saveProducts() {
+  localStorage.setItem(PRODUCT_KEY, JSON.stringify(products));
+}
+
+function saveCategories() {
+  localStorage.setItem(CATEGORY_KEY, JSON.stringify(categories));
+}
+
+function escapeHtml(value) {
+  return String(value || "")
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#039;");
+}
+
+function formatDate(date) {
+  return new Intl.DateTimeFormat("ja-JP", {
+    year: "numeric", month: "2-digit", day: "2-digit",
+    hour: "2-digit", minute: "2-digit"
+  }).format(date);
+}
+
+function updateCustomerField() {
+  $("customerField").classList.toggle("hidden", $("typeSelect").value !== "出庫");
+}
+
+function findProduct(model) {
+  return products.find(p => p.model === model);
+}
+
+function getProductInfo(model) {
+  const product = findProduct(model);
+  return {
+    category: product?.category || "",
+    maker: product?.maker || "",
+    model
+  };
+}
+
+function renderCategoryOptions() {
+  const select = $("categoryInput");
+  select.innerHTML = "";
+
+  categories.forEach(category => {
+    const option = document.createElement("option");
+    option.value = category;
+    option.textContent = category;
+    select.appendChild(option);
+  });
+}
+
+function addCategory(category) {
+  const value = String(category || "").trim();
+  if (!value) return;
+
+  if (!categories.includes(value)) {
+    categories.push(value);
+    saveCategories();
+  }
+}
+
+function resetForm() {
+  $("editingId").value = "";
+  $("formTitle").textContent = "在庫登録";
+  $("registerBtn").textContent = "登録";
+  $("cancelEditBtn").classList.add("hidden");
+
+  $("itemCode").value = "";
+  $("typeSelect").value = "入庫";
+  $("conditionSelect").value = "新品";
+  $("quantityInput").value = 1;
+  $("customerInput").value = "";
+  updateCustomerField();
+}
+
+function getStockList() {
+  const map = {};
+
+  records.forEach(r => {
+    if (!map[r.code]) {
+      const info = getProductInfo(r.code);
+      map[r.code] = {
+        category: info.category,
+        maker: info.maker,
+        code: r.code,
+        newStock: 0,
+        usedStock: 0
+      };
+    }
+
+    const diff = r.type === "入庫" ? r.quantity : -r.quantity;
+
+    if (r.condition === "新品") map[r.code].newStock += diff;
+    if (r.condition === "中古") map[r.code].usedStock += diff;
+  });
+
+  return Object.values(map).map(s => ({
+    ...s,
+    total: s.newStock + s.usedStock
+  }));
+}
+
+function renderProducts() {
+  const body = $("productBody");
+  body.innerHTML = "";
+
+  if (products.length === 0) {
+    body.innerHTML = `<tr><td colspan="4" class="p-4 text-center text-slate-400">商品一覧はまだありません</td></tr>`;
+    return;
   }
 
-  function formatDate(date) {
-    return new Intl.DateTimeFormat("ja-JP", {
-      year: "numeric",
-      month: "2-digit",
-      day: "2-digit",
-      hour: "2-digit",
-      minute: "2-digit"
-    }).format(date);
+  products.forEach(p => {
+    body.innerHTML += `
+      <tr class="border-b">
+        <td class="p-2">${escapeHtml(p.category)}</td>
+        <td class="p-2">${escapeHtml(p.maker)}</td>
+        <td class="p-2 font-semibold">${escapeHtml(p.model)}</td>
+        <td class="p-2 text-center">
+          <button onclick="deleteProduct('${p.id}')" class="rounded-lg bg-red-600 text-white px-3 py-2 text-xs font-bold">
+            削除
+          </button>
+        </td>
+      </tr>
+    `;
+  });
+}
+
+function renderHistory() {
+  const body = $("historyBody");
+  const cards = $("historyCards");
+
+  body.innerHTML = "";
+  cards.innerHTML = "";
+
+  if (records.length === 0) {
+    body.innerHTML = `<tr><td colspan="9" class="p-4 text-center text-slate-400">履歴はまだありません</td></tr>`;
+    cards.innerHTML = `<div class="p-4 text-center text-slate-400 border rounded-xl">履歴はまだありません</div>`;
+    return;
   }
 
-  function playBeep() {
-    try {
-      const AudioContext = window.AudioContext || window.webkitAudioContext;
-      if (!AudioContext) return;
+  [...records].reverse().forEach(r => {
+    const info = getProductInfo(r.code);
 
-      const audioCtx = new AudioContext();
-      const oscillator = audioCtx.createOscillator();
-      const gainNode = audioCtx.createGain();
+    body.innerHTML += `
+      <tr class="border-b">
+        <td class="p-2 whitespace-nowrap">${escapeHtml(r.date)}</td>
+        <td class="p-2 whitespace-nowrap">${escapeHtml(info.category)}</td>
+        <td class="p-2 whitespace-nowrap">${escapeHtml(info.maker)}</td>
+        <td class="p-2 whitespace-nowrap font-semibold">${escapeHtml(r.code)}</td>
+        <td class="p-2 whitespace-nowrap">${escapeHtml(r.type)}</td>
+        <td class="p-2 whitespace-nowrap">${escapeHtml(r.condition)}</td>
+        <td class="p-2 text-right">${r.quantity}</td>
+        <td class="p-2 whitespace-nowrap">${escapeHtml(r.customerName || "-")}</td>
+        <td class="p-2 whitespace-nowrap text-center">
+          <button onclick="editRecord('${r.id}')" class="rounded-lg bg-blue-600 text-white px-3 py-2 text-xs font-bold">編集</button>
+          <button onclick="deleteRecord('${r.id}')" class="rounded-lg bg-red-600 text-white px-3 py-2 text-xs font-bold">削除</button>
+        </td>
+      </tr>
+    `;
 
-      oscillator.type = "sine";
-      oscillator.frequency.value = 880;
+    cards.innerHTML += `
+      <div class="rounded-xl border border-slate-200 p-3 bg-white">
+        <div class="flex justify-between gap-3 mb-2">
+          <div class="font-bold text-base">${escapeHtml(r.code)}</div>
+          <div class="text-xs text-slate-500">${escapeHtml(r.date)}</div>
+        </div>
 
-      gainNode.gain.setValueAtTime(0.08, audioCtx.currentTime);
-      gainNode.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.15);
+        <div class="grid grid-cols-2 gap-2 text-sm">
+          <div><span class="text-slate-400">カテゴリ</span><br>${escapeHtml(info.category || "-")}</div>
+          <div><span class="text-slate-400">メーカー</span><br>${escapeHtml(info.maker || "-")}</div>
+          <div><span class="text-slate-400">区分</span><br>${escapeHtml(r.type)}</div>
+          <div><span class="text-slate-400">状態</span><br>${escapeHtml(r.condition)}</div>
+          <div><span class="text-slate-400">数量</span><br>${r.quantity}</div>
+          <div><span class="text-slate-400">顧客名</span><br>${escapeHtml(r.customerName || "-")}</div>
+        </div>
 
-      oscillator.connect(gainNode);
-      gainNode.connect(audioCtx.destination);
+        <div class="flex gap-2 mt-3">
+          <button onclick="editRecord('${r.id}')" class="flex-1 rounded-lg bg-blue-600 text-white py-2 text-sm font-bold">編集</button>
+          <button onclick="deleteRecord('${r.id}')" class="flex-1 rounded-lg bg-red-600 text-white py-2 text-sm font-bold">削除</button>
+        </div>
+      </div>
+    `;
+  });
+}
 
-      oscillator.start();
-      oscillator.stop(audioCtx.currentTime + 0.15);
-    } catch (error) {
-      console.error("ビープ音エラー:", error);
+function renderStock() {
+  const body = $("stockBody");
+  const cards = $("stockCards");
+  const stocks = getStockList();
+
+  body.innerHTML = "";
+  cards.innerHTML = "";
+
+  if (stocks.length === 0) {
+    body.innerHTML = `<tr><td colspan="6" class="p-4 text-center text-slate-400">在庫はまだありません</td></tr>`;
+    cards.innerHTML = `<div class="p-4 text-center text-slate-400 border rounded-xl">在庫はまだありません</div>`;
+    return;
+  }
+
+  stocks.forEach(s => {
+    body.innerHTML += `
+      <tr class="border-b">
+        <td class="p-2 whitespace-nowrap">${escapeHtml(s.category)}</td>
+        <td class="p-2 whitespace-nowrap">${escapeHtml(s.maker)}</td>
+        <td class="p-2 whitespace-nowrap font-semibold">${escapeHtml(s.code)}</td>
+        <td class="p-2 text-right">${s.newStock}</td>
+        <td class="p-2 text-right">${s.usedStock}</td>
+        <td class="p-2 text-right font-bold">${s.total}</td>
+      </tr>
+    `;
+
+    cards.innerHTML += `
+      <div class="rounded-xl border border-slate-200 p-3 bg-white">
+        <div class="font-bold text-base mb-2">${escapeHtml(s.code)}</div>
+
+        <div class="grid grid-cols-2 gap-2 text-sm mb-3">
+          <div><span class="text-slate-400">カテゴリ</span><br>${escapeHtml(s.category || "-")}</div>
+          <div><span class="text-slate-400">メーカー</span><br>${escapeHtml(s.maker || "-")}</div>
+        </div>
+
+        <div class="grid grid-cols-3 gap-2 text-center">
+          <div class="rounded-lg bg-slate-100 p-2">
+            <div class="text-xs text-slate-500">新品</div>
+            <div class="font-bold">${s.newStock}</div>
+          </div>
+          <div class="rounded-lg bg-slate-100 p-2">
+            <div class="text-xs text-slate-500">中古</div>
+            <div class="font-bold">${s.usedStock}</div>
+          </div>
+          <div class="rounded-lg bg-blue-100 p-2">
+            <div class="text-xs text-blue-600">総数</div>
+            <div class="font-bold text-blue-700">${s.total}</div>
+          </div>
+        </div>
+      </div>
+    `;
+  });
+}
+
+function renderAll() {
+  renderCategoryOptions();
+  renderProducts();
+  renderHistory();
+  renderStock();
+}
+
+function addOrUpdateProduct(category, maker, model) {
+  addCategory(category);
+
+  const existing = products.find(p => p.model === model);
+
+  if (existing) {
+    existing.category = category;
+    existing.maker = maker;
+  } else {
+    products.push({
+      id: crypto.randomUUID ? crypto.randomUUID() : String(Date.now() + Math.random()),
+      category,
+      maker,
+      model
+    });
+  }
+}
+
+$("productAccordionBtn").addEventListener("click", () => {
+  const content = $("productAccordionContent");
+  const isClosed = content.classList.contains("hidden");
+
+  content.classList.toggle("hidden", !isClosed);
+  $("productAccordionIcon").textContent = isClosed ? "▲" : "▼";
+});
+
+$("addCategoryBtn").addEventListener("click", () => {
+  const category = $("newCategoryInput").value.trim();
+
+  if (!category) return;
+
+  addCategory(category);
+  renderCategoryOptions();
+  $("categoryInput").value = category;
+  $("newCategoryInput").value = "";
+});
+
+$("addProductBtn").addEventListener("click", () => {
+  const category = $("categoryInput").value;
+  const maker = $("makerInput").value.trim();
+  const model = $("modelInput").value.trim();
+
+  if (!category || !model) return;
+
+  addOrUpdateProduct(category, maker, model);
+  saveProducts();
+  saveCategories();
+  renderAll();
+
+  $("makerInput").value = "";
+  $("modelInput").value = "";
+});
+
+function deleteProduct(id) {
+  if (!confirm("この商品を商品一覧から削除しますか？")) return;
+
+  products = products.filter(p => p.id !== id);
+  saveProducts();
+  renderAll();
+}
+
+function parseCSV(text) {
+  const rows = [];
+  let row = [];
+  let value = "";
+  let inQuotes = false;
+
+  text = text.replace(/^\uFEFF/, "");
+
+  for (let i = 0; i < text.length; i++) {
+    const char = text[i];
+    const nextChar = text[i + 1];
+
+    if (char === '"' && inQuotes && nextChar === '"') {
+      value += '"';
+      i++;
+    } else if (char === '"') {
+      inQuotes = !inQuotes;
+    } else if (char === "," && !inQuotes) {
+      row.push(value.trim());
+      value = "";
+    } else if ((char === "\n" || char === "\r") && !inQuotes) {
+      if (char === "\r" && nextChar === "\n") i++;
+      row.push(value.trim());
+      if (row.some(cell => cell !== "")) rows.push(row);
+      row = [];
+      value = "";
+    } else {
+      value += char;
     }
   }
 
-  function onScanSuccess(decodedText, decodedResult) {
-    document.getElementById("itemCode").value = decodedText;
-    document.getElementById("scanStatus").textContent = "読み取り成功：" + decodedText;
+  row.push(value.trim());
+  if (row.some(cell => cell !== "")) rows.push(row);
 
-    if (decodedText !== lastScannedCode) {
-      playBeep();
-      lastScannedCode = decodedText;
-    }
+  return rows.map(row => row.map(cell => cell.replace(/^"|"$/g, "")));
+}
 
-    console.log("JANコード読み取り成功:", decodedText, decodedResult);
+async function readCsvFile(file) {
+  const buffer = await file.arrayBuffer();
+  const utf8Text = new TextDecoder("utf-8", { fatal: false }).decode(buffer);
+  const garbled = (utf8Text.match(/ /g) || []).length > 0;
+
+  if (!garbled) return utf8Text;
+
+  try {
+    return new TextDecoder("shift_jis", { fatal: false }).decode(buffer);
+  } catch {
+    return utf8Text;
   }
+}
 
-  function onScanFailure(errorMessage) {
-    // 読み取り失敗は頻繁に発生するため、画面には出さない
+$("csvInput").addEventListener("change", async event => {
+  const file = event.target.files[0];
+  if (!file) return;
+
+  try {
+    const text = await readCsvFile(file);
+    const rows = parseCSV(text);
+
+    const first = rows[0]?.join(",") || "";
+    const hasHeader =
+      first.includes("カテゴリ") ||
+      first.includes("メーカー") ||
+      first.includes("型式");
+
+    const dataRows = hasHeader ? rows.slice(1) : rows;
+
+    dataRows.forEach(row => {
+      const [category, maker, model] = row;
+      if (category && model) addOrUpdateProduct(category, maker || "", model);
+    });
+
+    saveProducts();
+    saveCategories();
+    renderAll();
+  } catch (error) {
+    console.error("CSV読み込みエラー:", error);
+  } finally {
+    event.target.value = "";
   }
+});
 
-  function toggleClientField() {
-    const actionType = document.getElementById("actionType").value;
-    document.getElementById("clientField").classList.toggle("hidden", actionType !== "出庫");
-  }
+$("registerBtn").addEventListener("click", () => {
+  const code = $("itemCode").value.trim();
+  const type = $("typeSelect").value;
+  const condition = $("conditionSelect").value;
+  const quantity = Number($("quantityInput").value);
+  const customerName = $("customerInput").value.trim();
 
-  function registerStock() {
-    const code = document.getElementById("itemCode").value.trim();
-    const name = document.getElementById("itemName").value.trim();
-    const actionType = document.getElementById("actionType").value;
-    const status = document.getElementById("itemStatus").value;
-    const qty = Number(document.getElementById("itemQty").value);
-    const clientName = document.getElementById("clientName").value.trim();
+  if (!code || !quantity || quantity <= 0) return;
 
-    if (!code) {
-      alert("型式 / バーコードを入力してください。");
-      return;
-    }
-
-    if (!qty || qty <= 0) {
-      alert("数量は1以上で入力してください。");
-      return;
-    }
-
+  if ($("editingId").value) {
+    records = records.map(r => r.id === $("editingId").value ? {
+      ...r,
+      code,
+      type,
+      condition,
+      quantity,
+      customerName: type === "出庫" ? customerName : ""
+    } : r);
+  } else {
     records.push({
+      id: crypto.randomUUID ? crypto.randomUUID() : String(Date.now() + Math.random()),
       date: formatDate(new Date()),
       code,
-      name,
-      actionType,
-      status,
-      qty,
-      clientName: actionType === "出庫" ? clientName : ""
+      type,
+      condition,
+      quantity,
+      customerName: type === "出庫" ? customerName : ""
     });
-
-    saveRecords();
-    renderTables();
-
-    document.getElementById("itemQty").value = 1;
-    document.getElementById("clientName").value = "";
   }
 
-  function getStockSummary() {
-    const stockMap = {};
+  saveRecords();
+  renderAll();
+  resetForm();
+});
 
-    records.forEach(record => {
-      if (!stockMap[record.code]) {
-        stockMap[record.code] = {
-          code: record.code,
-          name: record.name || "",
-          newStock: 0,
-          usedStock: 0
-        };
-      }
+function editRecord(id) {
+  const r = records.find(item => item.id === id);
+  if (!r) return;
 
-      if (record.name) {
-        stockMap[record.code].name = record.name;
-      }
+  $("editingId").value = r.id;
+  $("itemCode").value = r.code;
+  $("typeSelect").value = r.type;
+  $("conditionSelect").value = r.condition;
+  $("quantityInput").value = r.quantity;
+  $("customerInput").value = r.customerName || "";
 
-      const diff = record.actionType === "入庫" ? record.qty : -record.qty;
+  $("formTitle").textContent = "履歴を編集";
+  $("registerBtn").textContent = "保存";
+  $("cancelEditBtn").classList.remove("hidden");
 
-      if (record.status === "新品") {
-        stockMap[record.code].newStock += diff;
-      } else {
-        stockMap[record.code].usedStock += diff;
-      }
-    });
+  updateCustomerField();
+  window.scrollTo({ top: 0, behavior: "smooth" });
+}
 
-    return Object.values(stockMap).map(item => ({
-      ...item,
-      total: item.newStock + item.usedStock
-    }));
-  }
+function deleteRecord(id) {
+  if (!confirm("この履歴を削除しますか？")) return;
 
-  function renderTables() {
-    const logBody = document.getElementById("logTableBody");
-    const stockBody = document.getElementById("stockTableBody");
+  records = records.filter(r => r.id !== id);
+  saveRecords();
+  renderAll();
 
-    logBody.innerHTML = "";
-    stockBody.innerHTML = "";
+  if ($("editingId").value === id) resetForm();
+}
 
-    if (records.length === 0) {
-      logBody.innerHTML = `
-        <tr>
-          <td colspan="7" class="py-4 px-4 text-center text-gray-400">
-            履歴はまだありません
-          </td>
-        </tr>
-      `;
-    } else {
-      [...records].reverse().forEach(record => {
-        logBody.innerHTML += `
-          <tr class="bg-white">
-            <td class="py-3 px-4 whitespace-nowrap">${escapeHtml(record.date)}</td>
-            <td class="py-3 px-4 whitespace-nowrap font-semibold">${escapeHtml(record.code)}</td>
-            <td class="py-3 px-4 whitespace-nowrap">${escapeHtml(record.name)}</td>
-            <td class="py-3 px-4 whitespace-nowrap">${escapeHtml(record.actionType)}</td>
-            <td class="py-3 px-4 whitespace-nowrap">${escapeHtml(record.status)}</td>
-            <td class="py-3 px-4 text-right">${record.qty}</td>
-            <td class="py-3 px-4 whitespace-nowrap">${escapeHtml(record.clientName || "-")}</td>
-          </tr>
-        `;
-      });
-    }
+$("cancelEditBtn").addEventListener("click", resetForm);
 
-    const stockSummary = getStockSummary();
+function downloadCSV(filename, rows) {
+  const csv = rows.map(row =>
+    row.map(value => `"${String(value ?? "").replaceAll('"', '""')}"`).join(",")
+  ).join("\n");
 
-    if (stockSummary.length === 0) {
-      stockBody.innerHTML = `
-        <tr>
-          <td colspan="5" class="py-4 px-4 text-center text-gray-400">
-            在庫はまだありません
-          </td>
-        </tr>
-      `;
-    } else {
-      stockSummary.forEach(item => {
-        stockBody.innerHTML += `
-          <tr class="bg-white">
-            <td class="py-3 px-4 whitespace-nowrap font-semibold">${escapeHtml(item.code)}</td>
-            <td class="py-3 px-4 whitespace-nowrap">${escapeHtml(item.name)}</td>
-            <td class="py-3 px-4 text-right">${item.newStock}</td>
-            <td class="py-3 px-4 text-right">${item.usedStock}</td>
-            <td class="py-3 px-4 text-right font-bold">${item.total}</td>
-          </tr>
-        `;
-      });
-    }
-  }
+  const blob = new Blob(["\uFEFF" + csv], { type: "text/csv;charset=utf-8;" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  a.click();
+  URL.revokeObjectURL(url);
+}
 
-  function switchTab(tabId) {
-    const tab1 = document.getElementById("tab1");
-    const tab2 = document.getElementById("tab2");
-    const btn1 = document.getElementById("btn-tab1");
-    const btn2 = document.getElementById("btn-tab2");
+function exportHistory() {
+  const rows = [
+    ["日付", "カテゴリ", "メーカー名", "型式", "区分", "状態", "数量", "顧客名"],
+    ...records.map(r => {
+      const info = getProductInfo(r.code);
+      return [r.date, info.category, info.maker, r.code, r.type, r.condition, r.quantity, r.customerName];
+    })
+  ];
 
-    tab1.classList.toggle("hidden", tabId !== "tab1");
-    tab2.classList.toggle("hidden", tabId !== "tab2");
+  downloadCSV("入出庫履歴.csv", rows);
+}
 
-    if (tabId === "tab1") {
-      btn1.className = "py-2 px-4 font-semibold border-b-2 border-blue-600 text-blue-600";
-      btn2.className = "py-2 px-4 font-semibold border-b-2 border-transparent text-gray-500 hover:text-blue-600";
-    } else {
-      btn2.className = "py-2 px-4 font-semibold border-b-2 border-blue-600 text-blue-600";
-      btn1.className = "py-2 px-4 font-semibold border-b-2 border-transparent text-gray-500 hover:text-blue-600";
-    }
-  }
+function exportStock() {
+  const rows = [
+    ["カテゴリ", "メーカー名", "型式", "新品在庫数", "中古在庫数", "総在庫数"],
+    ...getStockList().map(s => [s.category, s.maker, s.code, s.newStock, s.usedStock, s.total])
+  ];
 
-  function downloadStockCsv() {
-    const rows = [
-      ["型式", "商品名", "新品在庫数", "中古在庫数", "総在庫数"],
-      ...getStockSummary().map(item => [
-        item.code,
-        item.name,
-        item.newStock,
-        item.usedStock,
-        item.total
-      ])
-    ];
+  downloadCSV("在庫管理表.csv", rows);
+}
 
-    const csv = rows.map(row =>
-      row.map(value => `"${String(value ?? "").replaceAll('"', '""')}"`).join(",")
-    ).join("\n");
+$("exportBtn").addEventListener("click", () => {
+  activeTab === "history" ? exportHistory() : exportStock();
+});
 
-    const blob = new Blob(["\uFEFF" + csv], {
-      type: "text/csv;charset=utf-8;"
-    });
+$("historyTab").addEventListener("click", () => {
+  activeTab = "history";
 
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
+  $("historyArea").classList.remove("hidden");
+  $("stockArea").classList.add("hidden");
 
-    a.href = url;
-    a.download = "在庫一覧.csv";
-    a.click();
+  $("historyTab").className = "flex-1 rounded-xl bg-blue-600 text-white py-3 font-bold";
+  $("stockTab").className = "flex-1 rounded-xl bg-slate-200 text-slate-700 py-3 font-bold";
+});
 
-    URL.revokeObjectURL(url);
-  }
+$("stockTab").addEventListener("click", () => {
+  activeTab = "stock";
 
-  function getSafeScanConfig() {
-    return {
-      fps: 10,
-      qrbox: function(viewfinderWidth, viewfinderHeight) {
-        const width = Math.min(280, viewfinderWidth * 0.85);
-        const height = Math.min(120, viewfinderHeight * 0.35);
-        return {
-          width: Math.floor(width),
-          height: Math.floor(height)
-        };
+  $("stockArea").classList.remove("hidden");
+  $("historyArea").classList.add("hidden");
+
+  $("stockTab").className = "flex-1 rounded-xl bg-blue-600 text-white py-3 font-bold";
+  $("historyTab").className = "flex-1 rounded-xl bg-slate-200 text-slate-700 py-3 font-bold";
+});
+
+$("typeSelect").addEventListener("change", updateCustomerField);
+
+$("startScanBtn").addEventListener("click", async () => {
+  if (isScanning) return;
+
+  $("readerWrapper").classList.remove("hidden");
+  $("startScanBtn").classList.add("hidden");
+  $("stopScanBtn").classList.remove("hidden");
+  $("cameraStatus").textContent = "JANコードを横長の枠内に合わせてください。";
+
+  try {
+    html5QrCode = new Html5Qrcode("reader");
+
+    const formats = getJanFormatsToSupport();
+
+    const config = {
+      fps: 15,
+      qrbox: {
+        width: 280,
+        height: 120
       },
       aspectRatio: 1.777,
       disableFlip: true
     };
-  }
 
-  function startCameraSafely() {
-    if (!window.Html5Qrcode) {
-      console.error("html5-qrcodeライブラリが読み込まれていません。");
-      document.getElementById("scanStatus").textContent = "カメラ読み取りライブラリを読み込めませんでした。";
-      return;
+    if (formats) {
+      config.formatsToSupport = formats;
     }
 
-    html5QrCode = new Html5Qrcode("reader");
-
-    const cameraConfig = {
-      facingMode: "environment"
-    };
-
-    const scanConfig = getSafeScanConfig();
-
-    html5QrCode.start(
-      cameraConfig,
-      scanConfig,
+    await html5QrCode.start(
+      { facingMode: "environment" },
+      config,
       onScanSuccess,
       onScanFailure
-    ).then(() => {
-      document.getElementById("scanStatus").textContent = "カメラ起動中です。JANコードを横長の枠内に合わせてください。";
-      console.log("カメラ起動成功");
-    }).catch(error => {
-      console.error("カメラ初期化エラー:", error);
-      document.getElementById("scanStatus").textContent = "カメラを起動できませんでした。HTTPS環境またはSafari/Chromeで開いてください。";
-    });
+    );
+
+    isScanning = true;
+  } catch (error) {
+    console.error("カメラ起動エラー:", error);
+
+    $("readerWrapper").classList.add("hidden");
+    $("startScanBtn").classList.remove("hidden");
+    $("stopScanBtn").classList.add("hidden");
+
+    html5QrCode = null;
+    isScanning = false;
+  }
+});
+
+$("takePhotoBtn").addEventListener("click", () => {
+  $("photoInput").click();
+});
+
+$("photoInput").addEventListener("change", async event => {
+  const file = event.target.files[0];
+  if (!file) return;
+
+  let imageScanner = null;
+
+  try {
+    $("readerWrapper").classList.remove("hidden");
+
+    imageScanner = new Html5Qrcode("reader");
+    const result = await imageScanner.scanFile(file, true);
+
+    $("itemCode").value = result;
+    $("cameraStatus").textContent = `読み取り成功：${result}`;
+  } catch (error) {
+    console.error("写真からの読み取りエラー:", error);
+  } finally {
+    try {
+      if (imageScanner) await imageScanner.clear();
+    } catch (error) {
+      console.error("imageScanner clear error:", error);
+    }
+
+    $("readerWrapper").classList.add("hidden");
+    event.target.value = "";
+  }
+});
+
+$("stopScanBtn").addEventListener("click", stopScanner);
+
+async function stopScanner() {
+  try {
+    if (html5QrCode && isScanning) {
+      await html5QrCode.stop();
+      await html5QrCode.clear();
+    }
+  } catch (error) {
+    console.error("停止エラー:", error);
   }
 
-  window.addEventListener("load", () => {
-    renderTables();
-    toggleClientField();
+  html5QrCode = null;
+  isScanning = false;
 
-    setTimeout(() => {
-      startCameraSafely();
-    }, 500);
-  });
+  $("readerWrapper").classList.add("hidden");
+  $("startScanBtn").classList.remove("hidden");
+  $("stopScanBtn").classList.add("hidden");
+}
 
-  window.addEventListener("beforeunload", async () => {
-    try {
-      if (html5QrCode) {
-        await html5QrCode.stop();
-        await html5QrCode.clear();
-      }
-    } catch (error) {
-      console.error("カメラ停止エラー:", error);
-    }
-  });
+records = records.map(r => ({ id: r.id || String(Date.now() + Math.random()), ...r }));
+products = products.map(p => ({ id: p.id || String(Date.now() + Math.random()), ...p }));
+
+saveRecords();
+saveProducts();
+saveCategories();
+renderAll();
+updateCustomerField();
 </script>
 </body>
 </html>
