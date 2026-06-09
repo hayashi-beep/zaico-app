@@ -626,6 +626,7 @@ $("addCategoryBtn").addEventListener("click", async () => {
   renderCategoryOptions();
   $("categoryInput").value = category;
   $("newCategoryInput").value = "";
+
   await saveCategories();
 });
 
@@ -650,6 +651,7 @@ async function deleteProduct(id) {
 
   products = products.filter(p => p.id !== id);
   renderAll();
+
   await saveProducts();
 }
 
@@ -766,6 +768,7 @@ $("registerBtn").addEventListener("click", async () => {
 
   renderAll();
   resetForm();
+
   await saveRecords();
 });
 
