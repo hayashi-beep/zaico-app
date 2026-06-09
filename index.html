@@ -51,8 +51,9 @@
 
         <div>
           <label class="block text-sm font-semibold mb-1">商品名</label>
-          <input id="itemName" type="text" placeholder="JANコード一致時に自動反映"
+          <input id="itemName" type="text" placeholder="自動反映または手入力"
             class="w-full rounded-xl border px-4 py-3 text-base" />
+          <p class="mt-1 text-xs text-slate-500">※未登録の商品は手入力してください</p>
         </div>
       </div>
 
@@ -295,6 +296,7 @@ async function loadDataFromGas() {
 
     setSyncStatus("同期済み");
     renderAll();
+    lookupAndSetItemName();
   } catch (error) {
     console.error("GAS読み込みエラー:", error);
     setSyncStatus("同期エラー：GAS URLや公開設定を確認してください");
@@ -361,6 +363,7 @@ async function refreshFromGasQuietly() {
       : [...DEFAULT_CATEGORIES];
 
     renderAll();
+    lookupAndSetItemName();
     setSyncStatus("同期済み");
   } catch (error) {
     console.error("自動同期エラー:", error);
@@ -381,6 +384,8 @@ function getJanFormatsToSupport() {
 function lookupProductByInput(value) {
   const keyword = String(value || "").trim();
 
+  if (!keyword) return null;
+
   return products.find(product =>
     product.janCode === keyword ||
     product.model === keyword
@@ -393,6 +398,8 @@ function lookupAndSetItemName() {
 
   if (product && product.name) {
     $("itemName").value = product.name;
+  } else {
+    $("itemName").value = "";
   }
 }
 
