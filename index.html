@@ -10,7 +10,7 @@
   <meta name="mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="default" />
-  <meta name="theme-color" content="#2563eb" />
+  <meta name="theme-color" content="#f97316" />
 
   <link rel="icon" href="./icon.png" />
   <link rel="apple-touch-icon" href="./icon.png" />
@@ -23,221 +23,343 @@
       overscroll-behavior: none;
       -webkit-tap-highlight-color: transparent;
     }
+
+    body {
+      font-feature-settings: "palt";
+    }
+
     #reader video {
       width: 100% !important;
-      border-radius: 12px;
+      border-radius: 18px;
+    }
+
+    .glass-panel {
+      background: rgba(255, 255, 255, 0.92);
+      backdrop-filter: blur(18px);
+    }
+
+    .soft-scrollbar::-webkit-scrollbar {
+      width: 8px;
+      height: 8px;
+    }
+
+    .soft-scrollbar::-webkit-scrollbar-thumb {
+      background: #fed7aa;
+      border-radius: 999px;
+    }
+
+    .soft-scrollbar::-webkit-scrollbar-track {
+      background: transparent;
     }
   </style>
 </head>
 
-<body class="min-h-screen bg-gradient-to-br from-slate-50 via-slate-100 to-blue-50 text-slate-800">
-<main class="max-w-6xl mx-auto p-4 pb-24">
-  <header class="mb-6 rounded-3xl bg-white/85 backdrop-blur shadow-lg border border-white p-5">
-    <div class="border-l-8 border-blue-600 pl-4">
-      <h1 class="text-2xl tracking-tight">
-        <span class="font-black text-blue-700">CONNECT</span>
-        <span class="font-bold text-slate-800">在庫管理システム</span>
-      </h1>
-      <p id="syncStatus" class="text-sm text-slate-500 mt-1">Googleスプレッドシート同期対応</p>
-    </div>
-  </header>
-
-  <section class="bg-white/90 backdrop-blur rounded-2xl shadow-lg border border-white p-4 mb-5">
-    <h2 id="formTitle" class="text-lg font-bold mb-4">在庫登録</h2>
-    <input id="editingId" type="hidden" />
-
-    <div class="grid gap-4">
-      <div class="grid md:grid-cols-2 gap-3">
-        <div>
-          <label class="block text-sm font-semibold mb-1">型式 / JANコード</label>
-          <input id="itemCode" type="text" placeholder="型式またはJANコード"
-            class="w-full rounded-xl border border-slate-200 px-4 py-3 text-base shadow-sm focus:ring-4 focus:ring-blue-100 focus:border-blue-500 outline-none transition-all" />
+<body class="h-screen overflow-hidden bg-slate-50 text-slate-900">
+  <div class="grid h-screen grid-cols-[240px_1fr] overflow-hidden lg:grid-cols-[280px_1fr]">
+    <aside class="sticky top-0 z-40 h-screen overflow-hidden border-b border-slate-200 bg-white/95 backdrop-blur-xl lg:border-b-0 lg:border-r">
+      <div class="flex h-full flex-col px-4 py-4">
+        <div class="flex items-center gap-3 rounded-3xl bg-gradient-to-br from-orange-500 to-orange-600 p-4 text-white shadow-xl shadow-orange-500/20">
+          <div class="grid h-12 w-12 place-items-center rounded-2xl bg-white/20 text-xl font-black">C</div>
+          <div>
+            <p class="text-xs font-bold uppercase tracking-[0.28em] text-orange-100">CONNECT</p>
+            <h1 class="text-lg font-black tracking-tight">在庫管理</h1>
+          </div>
         </div>
 
-        <div>
-          <label class="block text-sm font-semibold mb-1">商品名</label>
-          <input id="itemName" type="text" placeholder="自動反映または手入力"
-            class="w-full rounded-xl border border-slate-200 px-4 py-3 text-base shadow-sm focus:ring-4 focus:ring-blue-100 focus:border-blue-500 outline-none transition-all" />
-          <p class="mt-1 text-xs text-slate-500">※未登録の商品は手入力してください</p>
-        </div>
-      </div>
-
-      <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
-        <button id="startScanBtn" class="rounded-xl bg-blue-600 text-white py-3 font-bold shadow-md hover:brightness-110 active:scale-[0.98] transition-all">
-          カメラで読み取る
-        </button>
-        <button id="takePhotoBtn" class="rounded-xl bg-indigo-600 text-white py-3 font-bold shadow-md hover:brightness-110 active:scale-[0.98] transition-all">
-          カメラで写真を撮る
-        </button>
-        <button id="stopScanBtn" class="rounded-xl bg-slate-600 text-white py-3 font-bold shadow-md hover:brightness-110 active:scale-[0.98] transition-all hidden">
-          読み取り停止
-        </button>
-      </div>
-
-      <input id="photoInput" type="file" accept="image/*" capture="environment" class="hidden" />
-
-      <div id="readerWrapper" class="hidden">
-        <p id="cameraStatus" class="text-xs text-slate-500 mb-2">
-          JANコードを横長の枠内に合わせてください。
-        </p>
-        <div id="reader" class="rounded-xl overflow-hidden border border-slate-200 shadow-inner"></div>
-      </div>
-
-      <div class="grid grid-cols-2 gap-3">
-        <div>
-          <label class="block text-sm font-semibold mb-1">入出区分</label>
-          <select id="typeSelect" class="w-full rounded-xl border border-slate-200 px-4 py-3 bg-white shadow-sm focus:ring-4 focus:ring-blue-100 focus:border-blue-500 outline-none transition-all">
-            <option value="入庫">入庫（在庫を追加）</option>
-            <option value="出庫">出庫（在庫を減らす）</option>
-          </select>
+        <div class="mt-5 rounded-2xl border border-orange-100 bg-orange-50 px-4 py-3">
+          <p class="text-xs font-bold text-orange-700">同期ステータス</p>
+          <p id="syncStatus" class="mt-1 text-sm font-semibold text-slate-700">Googleスプレッドシート同期対応</p>
         </div>
 
-        <div>
-          <label class="block text-sm font-semibold mb-1">状態</label>
-          <select id="conditionSelect" class="w-full rounded-xl border border-slate-200 px-4 py-3 bg-white shadow-sm focus:ring-4 focus:ring-blue-100 focus:border-blue-500 outline-none transition-all">
-            <option value="新品">新品</option>
-            <option value="中古">中古</option>
-          </select>
+        <nav id="mainNav" class="mt-6 grid gap-2">
+          <button type="button" data-page="dashboard" class="nav-link flex items-center gap-3 rounded-2xl bg-orange-500 px-4 py-3 text-left text-sm font-bold text-white shadow-lg shadow-orange-500/20">
+            <span class="grid h-8 w-8 place-items-center rounded-xl bg-white/20">＋</span>
+            ダッシュボード
+          </button>
+          <button type="button" data-page="products" class="nav-link flex items-center gap-3 rounded-2xl px-4 py-3 text-left text-sm font-bold text-slate-600 transition hover:bg-orange-50 hover:text-orange-700">
+            <span class="grid h-8 w-8 place-items-center rounded-xl bg-slate-100">□</span>
+            商品一覧
+          </button>
+          <button type="button" data-page="history" class="nav-link flex items-center gap-3 rounded-2xl px-4 py-3 text-left text-sm font-bold text-slate-600 transition hover:bg-orange-50 hover:text-orange-700">
+            <span class="grid h-8 w-8 place-items-center rounded-xl bg-slate-100">↕</span>
+            入出庫履歴
+          </button>
+        </nav>
+
+        <div class="mt-auto hidden rounded-3xl border border-slate-200 bg-slate-50 p-4 lg:block">
+          <p class="text-xs font-bold text-slate-400">Dashboard UI</p>
+          <p class="mt-1 text-sm font-bold text-slate-700">Orange Premium Edition</p>
         </div>
       </div>
+    </aside>
 
-      <div>
-        <label class="block text-sm font-semibold mb-1">数量</label>
-        <input id="quantityInput" type="number" min="1" value="1"
-          class="w-full rounded-xl border border-slate-200 px-4 py-3 text-base shadow-sm focus:ring-4 focus:ring-blue-100 focus:border-blue-500 outline-none transition-all" />
+    <main class="flex h-screen min-w-0 flex-col overflow-hidden p-3 sm:p-4 lg:p-5">
+      <header class="relative mb-3 flex shrink-0 flex-col justify-between gap-3 overflow-hidden rounded-[1.5rem] border border-white bg-cover bg-center p-5 shadow-sm sm:flex-row sm:items-center lg:p-6" style="background-image: linear-gradient(90deg, rgba(194, 65, 12, 0.88), rgba(249, 115, 22, 0.7), rgba(15, 23, 42, 0.22)), url('./image_50bd27.jpg');">
+        <div class="absolute inset-0 bg-white/5 backdrop-blur-[1px]"></div>
+        <div class="relative z-10">
+          <p class="text-sm font-bold uppercase tracking-[0.28em] text-orange-100">Inventory Dashboard</p>
+          <h2 class="mt-2 text-2xl font-black tracking-tight text-white drop-shadow-sm sm:text-3xl">CONNECT 在庫管理システム</h2>
+          <p class="mt-2 text-sm font-medium text-orange-50 drop-shadow-sm">入庫・出庫・商品マスター・在庫状況を一画面で管理できます。</p>
+        </div>
+
+        <div class="relative z-10 flex items-center gap-3 rounded-2xl border border-white/30 bg-white/20 px-4 py-3 text-white shadow-lg shadow-orange-950/10 backdrop-blur-md">
+          <div class="h-3 w-3 rounded-full bg-white shadow-lg shadow-white/40"></div>
+          <p class="text-sm font-bold">Live Sync Ready</p>
+        </div>
+      </header>
+
+      <div id="mainContentGrid" class="grid min-h-0 flex-1 gap-3 xl:grid-cols-[minmax(0,1.45fr)_minmax(340px,0.85fr)]">
+        <div id="primaryColumn" class="grid min-h-0 min-w-0 grid-rows-[auto_minmax(0,1fr)] gap-3">
+          <section id="inventoryForm" class="glass-panel shrink-0 overflow-hidden rounded-[1.5rem] border border-white p-4 shadow-xl shadow-slate-200/70">
+            <div class="mb-3 flex items-start justify-between gap-3">
+              <div>
+                <p class="text-xs font-black uppercase tracking-[0.24em] text-orange-500">Operation</p>
+                <h2 id="formTitle" class="mt-2 text-xl font-black text-slate-950">在庫登録</h2>
+              </div>
+              <div class="rounded-2xl bg-orange-50 px-3 py-2 text-xs font-bold text-orange-700">Stock Entry</div>
+            </div>
+
+            <input id="editingId" type="hidden" />
+
+            <div class="grid gap-3">
+              <div class="grid gap-3 md:grid-cols-2">
+                <div>
+                  <label class="mb-1.5 block text-sm font-bold text-slate-700">型式 / JANコード</label>
+                  <input id="itemCode" type="text" placeholder="型式またはJANコード"
+                    class="w-full rounded-2xl border border-slate-200 bg-white px-4 py-2.5 text-base shadow-sm outline-none transition-all placeholder:text-slate-400 focus:border-orange-500 focus:ring-4 focus:ring-orange-100" />
+                </div>
+
+                <div>
+                  <label class="mb-1.5 block text-sm font-bold text-slate-700">商品名</label>
+                  <input id="itemName" type="text" placeholder="自動反映または手入力"
+                    class="w-full rounded-2xl border border-slate-200 bg-white px-4 py-2.5 text-base shadow-sm outline-none transition-all placeholder:text-slate-400 focus:border-orange-500 focus:ring-4 focus:ring-orange-100" />
+                  <p class="mt-1 text-xs font-medium text-slate-500">※未登録の商品は手入力してください</p>
+                </div>
+              </div>
+
+              <div class="grid grid-cols-1 gap-2 sm:grid-cols-3">
+                <button id="startScanBtn" class="rounded-2xl bg-orange-500 px-4 py-2.5 font-black text-white shadow-lg shadow-orange-500/20 transition-all hover:bg-orange-600 active:scale-[0.98]">
+                  カメラで読み取る
+                </button>
+                <button id="takePhotoBtn" class="rounded-2xl border border-orange-300 bg-white px-4 py-2.5 font-black text-orange-600 shadow-sm transition-all hover:bg-orange-50 active:scale-[0.98]">
+                  カメラで写真を撮る
+                </button>
+                <button id="stopScanBtn" class="hidden rounded-2xl bg-slate-700 px-4 py-2.5 font-black text-white shadow-lg transition-all hover:bg-slate-800 active:scale-[0.98]">
+                  読み取り停止
+                </button>
+              </div>
+
+              <input id="photoInput" type="file" accept="image/*" capture="environment" class="hidden" />
+
+              <div id="readerWrapper" class="hidden max-h-[28vh] overflow-y-auto rounded-[1.5rem] border border-orange-100 bg-orange-50/60 p-3">
+                <p id="cameraStatus" class="mb-3 text-xs font-bold text-orange-700">
+                  JANコードを横長の枠内に合わせてください。
+                </p>
+                <div id="reader" class="overflow-hidden rounded-2xl border border-white bg-white shadow-inner"></div>
+              </div>
+
+              <div class="grid gap-3 sm:grid-cols-3">
+                <div>
+                  <label class="mb-1.5 block text-sm font-bold text-slate-700">入出区分</label>
+                  <select id="typeSelect" class="w-full rounded-2xl border border-slate-200 bg-white px-4 py-2.5 shadow-sm outline-none transition-all focus:border-orange-500 focus:ring-4 focus:ring-orange-100">
+                    <option value="入庫">入庫（在庫を追加）</option>
+                    <option value="出庫">出庫（在庫を減らす）</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label class="mb-1.5 block text-sm font-bold text-slate-700">状態</label>
+                  <select id="conditionSelect" class="w-full rounded-2xl border border-slate-200 bg-white px-4 py-2.5 shadow-sm outline-none transition-all focus:border-orange-500 focus:ring-4 focus:ring-orange-100">
+                    <option value="新品">新品</option>
+                    <option value="中古">中古</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label class="mb-1.5 block text-sm font-bold text-slate-700">数量</label>
+                  <input id="quantityInput" type="number" min="1" value="1"
+                    class="w-full rounded-2xl border border-slate-200 bg-white px-4 py-2.5 text-base shadow-sm outline-none transition-all focus:border-orange-500 focus:ring-4 focus:ring-orange-100" />
+                </div>
+              </div>
+
+              <div id="customerField" class="hidden">
+                <label class="mb-1.5 block text-sm font-bold text-slate-700">顧客名 / 案件名</label>
+                <input id="customerInput" type="text"
+                  class="w-full rounded-2xl border border-slate-200 bg-white px-4 py-2.5 text-base shadow-sm outline-none transition-all focus:border-orange-500 focus:ring-4 focus:ring-orange-100" />
+              </div>
+
+              <div class="flex flex-col gap-3 sm:flex-row">
+                <button id="registerBtn" class="rounded-2xl bg-orange-500 px-8 py-2.5 font-black text-white shadow-lg shadow-orange-500/20 transition-all hover:bg-orange-600 active:scale-[0.98]">
+                  登録
+                </button>
+                <button id="cancelEditBtn" class="hidden rounded-2xl bg-slate-500 px-8 py-2.5 font-black text-white shadow-lg transition-all hover:bg-slate-600 active:scale-[0.98]">
+                  編集をキャンセル
+                </button>
+              </div>
+            </div>
+          </section>
+
+          <section id="productMaster" class="glass-panel flex min-h-0 flex-col overflow-hidden rounded-[1.5rem] border border-white p-4 shadow-xl shadow-slate-200/70">
+            <button id="productAccordionBtn"
+              class="mb-3 flex w-full shrink-0 items-center justify-between rounded-2xl bg-slate-950 px-4 py-2.5 text-left font-black text-white shadow-lg transition-all hover:bg-slate-800 active:scale-[0.98]">
+              <span>商品一覧（マスター登録）</span>
+              <span id="productAccordionIcon" class="text-orange-300">▲</span>
+            </button>
+
+            <div id="productAccordionContent" class="flex min-h-0 flex-1 flex-col">
+              <div class="grid shrink-0 gap-2 md:grid-cols-5">
+                <select id="categoryInput" class="rounded-2xl border border-slate-200 bg-white px-4 py-2.5 shadow-sm outline-none transition-all focus:border-orange-500 focus:ring-4 focus:ring-orange-100"></select>
+                <input id="makerInput" placeholder="メーカー名" class="rounded-2xl border border-slate-200 bg-white px-4 py-2.5 shadow-sm outline-none transition-all placeholder:text-slate-400 focus:border-orange-500 focus:ring-4 focus:ring-orange-100" />
+                <input id="productNameInput" placeholder="商品名" class="rounded-2xl border border-slate-200 bg-white px-4 py-2.5 shadow-sm outline-none transition-all placeholder:text-slate-400 focus:border-orange-500 focus:ring-4 focus:ring-orange-100" />
+                <input id="modelInput" placeholder="型式" class="rounded-2xl border border-slate-200 bg-white px-4 py-2.5 shadow-sm outline-none transition-all placeholder:text-slate-400 focus:border-orange-500 focus:ring-4 focus:ring-orange-100" />
+                <input id="janInput" placeholder="JANコード" class="rounded-2xl border border-slate-200 bg-white px-4 py-2.5 shadow-sm outline-none transition-all placeholder:text-slate-400 focus:border-orange-500 focus:ring-4 focus:ring-orange-100" />
+              </div>
+
+              <div class="mt-2 grid shrink-0 gap-2 md:grid-cols-[1fr_auto]">
+                <input id="newCategoryInput" placeholder="追加するカテゴリ名" class="rounded-2xl border border-slate-200 bg-white px-4 py-2.5 shadow-sm outline-none transition-all placeholder:text-slate-400 focus:border-orange-500 focus:ring-4 focus:ring-orange-100" />
+                <button id="addCategoryBtn" class="rounded-2xl bg-slate-800 px-6 py-2.5 font-black text-white shadow-lg transition-all hover:bg-slate-900 active:scale-[0.98]">
+                  カテゴリを追加
+                </button>
+              </div>
+
+              <button id="addProductBtn" class="mt-2 w-full shrink-0 rounded-2xl bg-orange-500 px-4 py-2.5 font-black text-white shadow-lg shadow-orange-500/20 transition-all hover:bg-orange-600 active:scale-[0.98]">
+                商品一覧に登録
+              </button>
+
+              <div class="mt-3 shrink-0 rounded-3xl border border-dashed border-slate-300 bg-slate-50 p-3">
+                <label class="mb-1 block text-sm font-bold text-slate-700">CSVファイル読み込み</label>
+                <input id="csvInput" type="file" accept=".csv,text/csv"
+                  class="w-full rounded-2xl border border-slate-200 bg-white px-4 py-2 shadow-sm outline-none transition-all file:mr-4 file:rounded-xl file:border-0 file:bg-orange-50 file:px-4 file:py-1.5 file:font-bold file:text-orange-600 focus:border-orange-500 focus:ring-4 focus:ring-orange-100" />
+                <p class="mt-1 text-xs text-slate-500">
+                  CSV形式：カテゴリ,メーカー名,商品名,型式,JANコード
+                </p>
+              </div>
+
+              <div class="soft-scrollbar mt-3 min-h-0 flex-1 overflow-auto rounded-3xl border border-slate-100 bg-white shadow-sm">
+                <table class="w-full min-w-[820px] text-sm">
+                  <thead class="sticky top-0 bg-slate-50 text-xs uppercase tracking-wide text-slate-500">
+                    <tr>
+                      <th class="p-3 text-left">カテゴリ</th>
+                      <th class="p-3 text-left">メーカー名</th>
+                      <th class="p-3 text-left">商品名</th>
+                      <th class="p-3 text-left">型式</th>
+                      <th class="p-3 text-left">JANコード</th>
+                      <th class="p-3 text-center">操作</th>
+                    </tr>
+                  </thead>
+                  <tbody id="productBody" class="divide-y divide-slate-100"></tbody>
+                </table>
+              </div>
+            </div>
+          </section>
+        </div>
+
+        <aside id="secondaryColumn" class="grid min-h-0 min-w-0 grid-rows-[minmax(0,0.38fr)_minmax(0,0.62fr)] gap-3">
+          <section id="alertsPanel" class="glass-panel flex min-h-0 flex-col overflow-hidden rounded-[1.5rem] border border-white p-4 shadow-xl shadow-slate-200/70">
+            <div class="mb-3 flex shrink-0 items-center justify-between">
+              <div>
+                <p class="text-xs font-black uppercase tracking-[0.24em] text-red-500">Alert</p>
+                <h2 class="mt-2 text-xl font-black text-slate-950">最新の在庫アラート</h2>
+              </div>
+              <span class="rounded-full bg-red-50 px-3 py-1 text-xs font-black text-red-600">Low Stock</span>
+            </div>
+
+            <div id="stockAlertList" class="soft-scrollbar grid min-h-0 flex-1 gap-3 overflow-y-auto pr-1">
+              <div class="flex items-center justify-between gap-3 rounded-2xl border border-red-100 bg-red-50 px-4 py-3">
+                <div>
+                  <p class="font-bold text-slate-800">在庫データ同期後に表示</p>
+                  <p class="mt-1 text-xs text-slate-500">在庫が少ない商品をここに表示します。</p>
+                </div>
+                <span class="shrink-0 rounded-full bg-red-500 px-3 py-1 text-xs font-black text-white">在庫不足</span>
+              </div>
+
+              <div class="flex items-center justify-between gap-3 rounded-2xl border border-orange-100 bg-orange-50 px-4 py-3">
+                <div>
+                  <p class="font-bold text-slate-800">残りわずかの商品</p>
+                  <p class="mt-1 text-xs text-slate-500">しきい値に応じて表示できます。</p>
+                </div>
+                <span class="shrink-0 rounded-full bg-orange-500 px-3 py-1 text-xs font-black text-white">残りわずか</span>
+              </div>
+            </div>
+          </section>
+
+          <section id="historyPanel" class="glass-panel flex min-h-0 flex-col overflow-hidden rounded-[1.5rem] border border-white p-4 shadow-xl shadow-slate-200/70">
+            <div class="mb-3 flex shrink-0 items-center justify-between">
+              <div>
+                <p class="text-xs font-black uppercase tracking-[0.24em] text-orange-500">Recent</p>
+                <h2 class="mt-2 text-xl font-black text-slate-950">最近の入出庫履歴</h2>
+              </div>
+              <button id="dashboardProductsBtn" type="button" class="rounded-2xl bg-orange-500 px-4 py-2.5 text-sm font-black text-white shadow-lg shadow-orange-500/20 transition-all hover:bg-orange-600 active:scale-[0.98]">
+                商品マスター管理へ
+              </button>
+            </div>
+
+            <div class="mb-3 flex shrink-0 gap-2">
+              <button id="historyTab" class="flex-1 rounded-2xl bg-orange-500 py-2.5 font-black text-white shadow-lg shadow-orange-500/20 transition-all hover:bg-orange-600 active:scale-[0.98]">入出庫の履歴</button>
+              <button id="stockTab" class="flex-1 rounded-2xl bg-slate-200 py-2.5 font-black text-slate-700 shadow-sm transition-all hover:bg-slate-300 active:scale-[0.98]">在庫管理表</button>
+            </div>
+
+            <button id="exportBtn" class="mb-3 w-32 shrink-0 self-end rounded-2xl bg-slate-950 px-6 py-2.5 font-black text-white shadow-lg transition-all hover:bg-slate-800 active:scale-[0.98]">
+              出力
+            </button>
+
+            <div id="historyDataGrid" class="min-h-0 flex-1">
+              <div id="historyArea" class="min-h-0 flex-1">
+                <div id="historyCards" class="soft-scrollbar grid max-h-full gap-3 overflow-y-auto md:hidden"></div>
+
+                <div class="soft-scrollbar hidden h-full overflow-auto rounded-3xl border border-slate-100 bg-white shadow-sm md:block">
+                  <table class="w-full min-w-[1100px] text-sm">
+                    <thead class="sticky top-0 bg-slate-50 text-xs uppercase tracking-wide text-slate-500">
+                      <tr>
+                        <th class="p-3 text-left">日付</th>
+                        <th class="p-3 text-left">カテゴリ</th>
+                        <th class="p-3 text-left">メーカー名</th>
+                        <th class="p-3 text-left">商品名</th>
+                        <th class="p-3 text-left">型式</th>
+                        <th class="p-3 text-left">JANコード</th>
+                        <th class="p-3 text-left">区分</th>
+                        <th class="p-3 text-left">状態</th>
+                        <th class="p-3 text-right">数量</th>
+                        <th class="p-3 text-left">顧客名</th>
+                        <th class="p-3 text-center">操作</th>
+                      </tr>
+                    </thead>
+                    <tbody id="historyBody" class="divide-y divide-slate-100"></tbody>
+                  </table>
+                </div>
+              </div>
+
+              <div id="stockArea" class="hidden min-h-0 flex-1">
+                <div id="stockCards" class="soft-scrollbar grid max-h-full gap-3 overflow-y-auto md:hidden"></div>
+
+                <div class="soft-scrollbar hidden h-full overflow-auto rounded-3xl border border-slate-100 bg-white shadow-sm md:block">
+                  <table class="w-full min-w-[900px] text-sm">
+                    <thead class="sticky top-0 bg-slate-50 text-xs uppercase tracking-wide text-slate-500">
+                      <tr>
+                        <th class="p-3 text-left">カテゴリ</th>
+                        <th class="p-3 text-left">メーカー名</th>
+                        <th class="p-3 text-left">商品名</th>
+                        <th class="p-3 text-left">型式</th>
+                        <th class="p-3 text-left">JANコード</th>
+                        <th class="p-3 text-right">新品在庫数</th>
+                        <th class="p-3 text-right">中古在庫数</th>
+                        <th class="p-3 text-right">総在庫数</th>
+                      </tr>
+                    </thead>
+                    <tbody id="stockBody" class="divide-y divide-slate-100"></tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+          </section>
+        </aside>
       </div>
-
-      <div id="customerField" class="hidden">
-        <label class="block text-sm font-semibold mb-1">顧客名 / 案件名</label>
-        <input id="customerInput" type="text"
-          class="w-full rounded-xl border border-slate-200 px-4 py-3 text-base shadow-sm focus:ring-4 focus:ring-blue-100 focus:border-blue-500 outline-none transition-all" />
-      </div>
-
-      <div class="flex gap-3">
-        <button id="registerBtn" class="w-32 rounded-xl bg-emerald-600 text-white py-3 font-bold shadow-md hover:brightness-110 active:scale-[0.98] transition-all">
-          登録
-        </button>
-        <button id="cancelEditBtn" class="w-40 rounded-xl bg-slate-500 text-white py-3 font-bold shadow-md hover:brightness-110 active:scale-[0.98] transition-all hidden">
-          編集をキャンセル
-        </button>
-      </div>
-    </div>
-  </section>
-
-  <section class="bg-white/90 backdrop-blur rounded-2xl shadow-lg border border-white p-4 mb-5">
-    <button id="productAccordionBtn"
-      class="w-full flex items-center justify-between rounded-xl bg-indigo-600 text-white py-3 px-4 font-bold shadow-md hover:brightness-110 active:scale-[0.98] transition-all">
-      <span>商品一覧</span>
-      <span id="productAccordionIcon">▼</span>
-    </button>
-
-    <div id="productAccordionContent" class="hidden mt-4">
-      <div class="grid md:grid-cols-5 gap-3 mb-3">
-        <select id="categoryInput" class="rounded-xl border border-slate-200 px-4 py-3 bg-white shadow-sm focus:ring-4 focus:ring-blue-100 focus:border-blue-500 outline-none transition-all"></select>
-        <input id="makerInput" placeholder="メーカー名" class="rounded-xl border border-slate-200 px-4 py-3 shadow-sm focus:ring-4 focus:ring-blue-100 focus:border-blue-500 outline-none transition-all" />
-        <input id="productNameInput" placeholder="商品名" class="rounded-xl border border-slate-200 px-4 py-3 shadow-sm focus:ring-4 focus:ring-blue-100 focus:border-blue-500 outline-none transition-all" />
-        <input id="modelInput" placeholder="型式" class="rounded-xl border border-slate-200 px-4 py-3 shadow-sm focus:ring-4 focus:ring-blue-100 focus:border-blue-500 outline-none transition-all" />
-        <input id="janInput" placeholder="JANコード" class="rounded-xl border border-slate-200 px-4 py-3 shadow-sm focus:ring-4 focus:ring-blue-100 focus:border-blue-500 outline-none transition-all" />
-      </div>
-
-      <div class="grid md:grid-cols-2 gap-3 mb-3">
-        <input id="newCategoryInput" placeholder="追加するカテゴリ名" class="rounded-xl border border-slate-200 px-4 py-3 shadow-sm focus:ring-4 focus:ring-blue-100 focus:border-blue-500 outline-none transition-all" />
-        <button id="addCategoryBtn" class="rounded-xl bg-slate-700 text-white py-3 font-bold shadow-md hover:brightness-110 active:scale-[0.98] transition-all">
-          カテゴリを追加
-        </button>
-      </div>
-
-      <button id="addProductBtn" class="w-full rounded-xl bg-indigo-600 text-white py-3 font-bold mb-3 shadow-md hover:brightness-110 active:scale-[0.98] transition-all">
-        商品一覧に登録
-      </button>
-
-      <label class="block text-sm font-semibold mb-1">CSVファイル読み込み</label>
-      <input id="csvInput" type="file" accept=".csv,text/csv"
-        class="w-full rounded-xl border border-slate-200 px-4 py-3 bg-white mb-2 shadow-sm focus:ring-4 focus:ring-blue-100 focus:border-blue-500 outline-none transition-all" />
-
-      <p class="text-xs text-slate-500 mb-4">
-        CSV形式：カテゴリ,メーカー名,商品名,型式,JANコード
-      </p>
-
-      <div class="overflow-x-auto rounded-xl border border-slate-100 shadow-sm">
-        <table class="w-full text-sm">
-          <thead class="bg-slate-100">
-            <tr>
-              <th class="p-2 text-left">カテゴリ</th>
-              <th class="p-2 text-left">メーカー名</th>
-              <th class="p-2 text-left">商品名</th>
-              <th class="p-2 text-left">型式</th>
-              <th class="p-2 text-left">JANコード</th>
-              <th class="p-2 text-center">操作</th>
-            </tr>
-          </thead>
-          <tbody id="productBody"></tbody>
-        </table>
-      </div>
-    </div>
-  </section>
-
-  <section class="bg-white/90 backdrop-blur rounded-2xl shadow-lg border border-white p-4">
-    <div class="flex gap-2 mb-4">
-      <button id="historyTab" class="flex-1 rounded-xl bg-blue-600 text-white py-3 font-bold shadow-md hover:brightness-110 active:scale-[0.98] transition-all">入出庫の履歴</button>
-      <button id="stockTab" class="flex-1 rounded-xl bg-slate-200 text-slate-700 py-3 font-bold shadow-md hover:brightness-110 active:scale-[0.98] transition-all">在庫管理表</button>
-    </div>
-
-    <button id="exportBtn" class="w-full rounded-xl bg-emerald-600 text-white py-3 font-bold mb-4 shadow-md hover:brightness-110 active:scale-[0.98] transition-all">
-      出力
-    </button>
-
-    <div id="historyArea">
-      <div id="historyCards" class="grid gap-3 md:hidden"></div>
-
-      <div class="hidden md:block overflow-x-auto rounded-xl border border-slate-100 shadow-sm">
-        <table class="w-full text-sm">
-          <thead class="bg-slate-100">
-            <tr>
-              <th class="p-2 text-left">日付</th>
-              <th class="p-2 text-left">カテゴリ</th>
-              <th class="p-2 text-left">メーカー名</th>
-              <th class="p-2 text-left">商品名</th>
-              <th class="p-2 text-left">型式</th>
-              <th class="p-2 text-left">JANコード</th>
-              <th class="p-2 text-left">区分</th>
-              <th class="p-2 text-left">状態</th>
-              <th class="p-2 text-right">数量</th>
-              <th class="p-2 text-left">顧客名</th>
-              <th class="p-2 text-center">操作</th>
-            </tr>
-          </thead>
-          <tbody id="historyBody"></tbody>
-        </table>
-      </div>
-    </div>
-
-    <div id="stockArea" class="hidden">
-      <div id="stockCards" class="grid gap-3 md:hidden"></div>
-
-      <div class="hidden md:block overflow-x-auto rounded-xl border border-slate-100 shadow-sm">
-        <table class="w-full text-sm">
-          <thead class="bg-slate-100">
-            <tr>
-              <th class="p-2 text-left">カテゴリ</th>
-              <th class="p-2 text-left">メーカー名</th>
-              <th class="p-2 text-left">商品名</th>
-              <th class="p-2 text-left">型式</th>
-              <th class="p-2 text-left">JANコード</th>
-              <th class="p-2 text-right">新品在庫数</th>
-              <th class="p-2 text-right">中古在庫数</th>
-              <th class="p-2 text-right">総在庫数</th>
-            </tr>
-          </thead>
-          <tbody id="stockBody"></tbody>
-        </table>
-      </div>
-    </div>
-  </section>
-</main>
-
+    </main>
+  </div>
+</body>
+</html>
 <script>
-const GAS_URL = "https://script.google.com/macros/s/AKfycbxOo1NgoxE5elZ5Eq4Va0WNuSXIE5P7HL7vLwXk5hLwDT6YYc_Zy2sGfN-BYLNapkkD/exec";
+const GAS_URL = "https://script.google.com/macros/s/AKfycbw1cV81QVc-mnDLou4qK-ei9RsKDXxCwbJgrqL7bLAgUhzQHjCd0RjgqENPz7UN6c50/exec";
 
 const DEFAULT_CATEGORIES = [
   "HUB", "ルーター", "AP", "カメラ", "wi-fi", "電話機",
@@ -248,12 +370,110 @@ let records = [];
 let products = [];
 let categories = [...DEFAULT_CATEGORIES];
 let activeTab = "history";
+let currentPage = "dashboard";
 
 let html5QrCode = null;
 let isScanning = false;
 let isSaving = false;
 
 const $ = id => document.getElementById(id);
+
+const navActiveClass = "nav-link flex items-center gap-3 rounded-2xl bg-orange-500 px-4 py-3 text-left text-sm font-bold text-white shadow-lg shadow-orange-500/20";
+const navIdleClass = "nav-link flex items-center gap-3 rounded-2xl px-4 py-3 text-left text-sm font-bold text-slate-600 transition hover:bg-orange-50 hover:text-orange-700";
+const mainDashboardClass = "grid min-h-0 flex-1 gap-3 xl:grid-cols-[minmax(0,6.5fr)_minmax(320px,3.5fr)] xl:grid-rows-[auto_minmax(0,1fr)]";
+const mainSingleClass = "grid min-h-0 flex-1 gap-3";
+const primaryDashboardClass = "contents";
+const secondaryDashboardClass = "contents";
+const inventoryPanelClass = "glass-panel shrink-0 overflow-hidden rounded-[1.5rem] border border-white p-4 shadow-xl shadow-slate-200/70";
+const inventoryDashboardClass = `${inventoryPanelClass} xl:col-start-1 xl:row-start-1`;
+const alertsPanelClass = "glass-panel flex min-h-0 flex-col overflow-hidden rounded-[1.5rem] border border-white p-4 shadow-xl shadow-slate-200/70";
+const alertsDashboardClass = `${alertsPanelClass} xl:col-start-2 xl:row-start-1`;
+const productPanelClass = "glass-panel flex min-h-0 flex-col overflow-hidden rounded-[1.5rem] border border-white p-4 shadow-xl shadow-slate-200/70";
+const historyPanelClass = "glass-panel flex min-h-0 flex-col overflow-hidden rounded-[1.5rem] border border-white p-4 shadow-xl shadow-slate-200/70";
+const historyDashboardClass = `${historyPanelClass} xl:col-span-2 xl:row-start-2`;
+
+function setNavActive(page) {
+  document.querySelectorAll("[data-page]").forEach(item => {
+    const active = item.dataset.page === page;
+    item.className = active ? navActiveClass : navIdleClass;
+    const icon = item.querySelector("span");
+    if (icon) {
+      icon.className = active
+        ? "grid h-8 w-8 place-items-center rounded-xl bg-white/20"
+        : "grid h-8 w-8 place-items-center rounded-xl bg-slate-100";
+    }
+  });
+}
+
+function setHistoryTabClasses(selected) {
+  $("historyTab").className = selected === "history"
+    ? "flex-1 rounded-2xl bg-orange-500 py-2.5 font-black text-white shadow-lg shadow-orange-500/20 transition-all hover:bg-orange-600 active:scale-[0.98]"
+    : "flex-1 rounded-2xl bg-slate-200 py-2.5 font-black text-slate-700 shadow-sm transition-all hover:bg-slate-300 active:scale-[0.98]";
+  $("stockTab").className = selected === "stock"
+    ? "flex-1 rounded-2xl bg-orange-500 py-2.5 font-black text-white shadow-lg shadow-orange-500/20 transition-all hover:bg-orange-600 active:scale-[0.98]"
+    : "flex-1 rounded-2xl bg-slate-200 py-2.5 font-black text-slate-700 shadow-sm transition-all hover:bg-slate-300 active:scale-[0.98]";
+}
+
+function showDashboardHistory() {
+  activeTab = "history";
+  $("historyDataGrid").className = "min-h-0 flex-1";
+  $("historyArea").classList.remove("hidden");
+  $("stockArea").classList.add("hidden");
+  setHistoryTabClasses("history");
+}
+
+function showHistoryContent(tab) {
+  activeTab = tab;
+  $("historyDataGrid").className = "min-h-0 flex-1";
+  $("historyArea").className = tab === "history" ? "min-h-0 flex-1" : "hidden min-h-0 flex-1";
+  $("stockArea").className = tab === "stock" ? "min-h-0 flex-1" : "hidden min-h-0 flex-1";
+  setHistoryTabClasses(tab);
+}
+
+function showPage(page) {
+  currentPage = page;
+  setNavActive(page);
+
+  $("mainContentGrid").className = page === "dashboard" ? mainDashboardClass : mainSingleClass;
+  $("primaryColumn").className = page === "dashboard" ? primaryDashboardClass : "grid min-h-0 min-w-0 gap-3";
+  $("secondaryColumn").className = page === "dashboard" ? secondaryDashboardClass : "grid min-h-0 min-w-0 gap-3";
+
+  $("inventoryForm").className = page === "dashboard"
+    ? inventoryDashboardClass
+    : inventoryPanelClass;
+  $("alertsPanel").className = page === "dashboard"
+    ? alertsDashboardClass
+    : alertsPanelClass;
+  $("productMaster").className = page === "products"
+    ? `${productPanelClass} h-full`
+    : productPanelClass;
+  $("historyPanel").className = page === "history"
+    ? `${historyPanelClass} h-full`
+    : page === "dashboard"
+      ? historyDashboardClass
+      : historyPanelClass;
+
+  $("inventoryForm").classList.toggle("hidden", page !== "dashboard");
+  $("productMaster").classList.toggle("hidden", page !== "products");
+  $("alertsPanel").classList.toggle("hidden", page !== "dashboard");
+  $("historyPanel").classList.toggle("hidden", page === "products");
+  $("dashboardProductsBtn").classList.toggle("hidden", page !== "dashboard");
+  $("primaryColumn").classList.toggle("hidden", page === "history");
+  $("secondaryColumn").classList.toggle("hidden", page === "products");
+
+  if (page === "dashboard") {
+    showDashboardHistory();
+  }
+
+  if (page === "products") {
+    $("productAccordionContent").classList.remove("hidden");
+    $("productAccordionIcon").textContent = "▼";
+  }
+
+  if (page === "history") {
+    showHistoryContent("history");
+  }
+}
 
 function setSyncStatus(text) {
   $("syncStatus").textContent = text;
@@ -551,20 +771,20 @@ function renderProducts() {
   body.innerHTML = "";
 
   if (products.length === 0) {
-    body.innerHTML = `<tr><td colspan="6" class="p-4 text-center text-slate-400">商品一覧はまだありません</td></tr>`;
+    body.innerHTML = `<tr><td colspan="6" class="p-5 text-center text-slate-400">商品一覧はまだありません</td></tr>`;
     return;
   }
 
   products.forEach(product => {
     body.innerHTML += `
-      <tr class="border-b">
-        <td class="p-2">${escapeHtml(product.category)}</td>
-        <td class="p-2">${escapeHtml(product.maker)}</td>
-        <td class="p-2">${escapeHtml(product.name)}</td>
-        <td class="p-2 font-semibold">${escapeHtml(product.model)}</td>
-        <td class="p-2">${escapeHtml(product.janCode)}</td>
-        <td class="p-2 text-center">
-          <button onclick="deleteProduct('${product.id}')" class="rounded-lg bg-red-600 text-white px-3 py-2 text-xs font-bold hover:brightness-110 active:scale-[0.98] transition-all">
+      <tr class="transition hover:bg-orange-50/50">
+        <td class="p-3 whitespace-nowrap">${escapeHtml(product.category)}</td>
+        <td class="p-3 whitespace-nowrap">${escapeHtml(product.maker)}</td>
+        <td class="p-3 whitespace-nowrap font-bold text-slate-800">${escapeHtml(product.name)}</td>
+        <td class="p-3 whitespace-nowrap font-black text-slate-900">${escapeHtml(product.model)}</td>
+        <td class="p-3 whitespace-nowrap">${escapeHtml(product.janCode)}</td>
+        <td class="p-3 text-center">
+          <button onclick="deleteProduct('${product.id}')" class="rounded-xl bg-red-500 px-3 py-2 text-xs font-black text-white shadow-sm transition-all hover:bg-red-600 active:scale-[0.98]">
             削除
           </button>
         </td>
@@ -581,55 +801,105 @@ function renderHistory() {
   cards.innerHTML = "";
 
   if (records.length === 0) {
-    body.innerHTML = `<tr><td colspan="11" class="p-4 text-center text-slate-400">履歴はまだありません</td></tr>`;
-    cards.innerHTML = `<div class="p-4 text-center text-slate-400 border rounded-xl">履歴はまだありません</div>`;
+    body.innerHTML = `<tr><td colspan="11" class="p-5 text-center text-slate-400">履歴はまだありません</td></tr>`;
+    cards.innerHTML = `<div class="rounded-2xl border border-slate-200 bg-white p-4 text-center text-slate-400">履歴はまだありません</div>`;
     return;
   }
 
   [...records].reverse().forEach(record => {
     const info = getProductInfo(record.code, record.itemName);
+    const typeClass = record.type === "入庫"
+      ? "bg-emerald-50 text-emerald-700 border-emerald-100"
+      : "bg-orange-50 text-orange-700 border-orange-100";
 
     body.innerHTML += `
-      <tr class="border-b">
-        <td class="p-2 whitespace-nowrap">${escapeHtml(record.date)}</td>
-        <td class="p-2 whitespace-nowrap">${escapeHtml(info.category)}</td>
-        <td class="p-2 whitespace-nowrap">${escapeHtml(info.maker)}</td>
-        <td class="p-2 whitespace-nowrap">${escapeHtml(info.name)}</td>
-        <td class="p-2 whitespace-nowrap font-semibold">${escapeHtml(info.model)}</td>
-        <td class="p-2 whitespace-nowrap">${escapeHtml(info.janCode)}</td>
-        <td class="p-2 whitespace-nowrap">${escapeHtml(record.type)}</td>
-        <td class="p-2 whitespace-nowrap">${escapeHtml(record.condition)}</td>
-        <td class="p-2 text-right">${record.quantity}</td>
-        <td class="p-2 whitespace-nowrap">${escapeHtml(record.customerName || "-")}</td>
-        <td class="p-2 whitespace-nowrap text-center">
-          <button onclick="editRecord('${record.id}')" class="rounded-lg bg-blue-600 text-white px-3 py-2 text-xs font-bold hover:brightness-110 active:scale-[0.98] transition-all">編集</button>
-          <button onclick="deleteRecord('${record.id}')" class="rounded-lg bg-red-600 text-white px-3 py-2 text-xs font-bold hover:brightness-110 active:scale-[0.98] transition-all">削除</button>
+      <tr class="transition hover:bg-orange-50/50">
+        <td class="p-3 whitespace-nowrap">${escapeHtml(record.date)}</td>
+        <td class="p-3 whitespace-nowrap">${escapeHtml(info.category)}</td>
+        <td class="p-3 whitespace-nowrap">${escapeHtml(info.maker)}</td>
+        <td class="p-3 whitespace-nowrap font-bold text-slate-800">${escapeHtml(info.name)}</td>
+        <td class="p-3 whitespace-nowrap font-black text-slate-900">${escapeHtml(info.model)}</td>
+        <td class="p-3 whitespace-nowrap">${escapeHtml(info.janCode)}</td>
+        <td class="p-3 whitespace-nowrap">
+          <span class="inline-flex rounded-full border px-3 py-1 text-xs font-black ${typeClass}">
+            ${escapeHtml(record.type)}
+          </span>
+        </td>
+        <td class="p-3 whitespace-nowrap">${escapeHtml(record.condition)}</td>
+        <td class="p-3 text-right font-black">${record.quantity}</td>
+        <td class="p-3 whitespace-nowrap">${escapeHtml(record.customerName || "-")}</td>
+        <td class="p-3 whitespace-nowrap text-center">
+          <button onclick="editRecord('${record.id}')" class="rounded-xl bg-orange-500 px-3 py-2 text-xs font-black text-white shadow-sm transition-all hover:bg-orange-600 active:scale-[0.98]">編集</button>
+          <button onclick="deleteRecord('${record.id}')" class="rounded-xl bg-red-500 px-3 py-2 text-xs font-black text-white shadow-sm transition-all hover:bg-red-600 active:scale-[0.98]">削除</button>
         </td>
       </tr>
     `;
 
     cards.innerHTML += `
-      <div class="rounded-xl border border-slate-200 p-3 bg-white shadow-md">
-        <div class="flex justify-between gap-3 mb-2">
-          <div class="font-bold text-base">${escapeHtml(info.name || info.model || record.code)}</div>
-          <div class="text-xs text-slate-500">${escapeHtml(record.date)}</div>
+      <div class="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+        <div class="mb-3 flex justify-between gap-3">
+          <div class="font-black text-slate-900">${escapeHtml(info.name || info.model || record.code)}</div>
+          <div class="text-xs font-bold text-slate-500">${escapeHtml(record.date)}</div>
         </div>
 
-        <div class="grid grid-cols-2 gap-2 text-sm">
-          <div><span class="text-slate-400">型式</span><br>${escapeHtml(info.model || "-")}</div>
-          <div><span class="text-slate-400">JANコード</span><br>${escapeHtml(info.janCode || "-")}</div>
-          <div><span class="text-slate-400">カテゴリ</span><br>${escapeHtml(info.category || "-")}</div>
-          <div><span class="text-slate-400">メーカー</span><br>${escapeHtml(info.maker || "-")}</div>
-          <div><span class="text-slate-400">区分</span><br>${escapeHtml(record.type)}</div>
-          <div><span class="text-slate-400">状態</span><br>${escapeHtml(record.condition)}</div>
-          <div><span class="text-slate-400">数量</span><br>${record.quantity}</div>
-          <div><span class="text-slate-400">顧客名</span><br>${escapeHtml(record.customerName || "-")}</div>
+        <div class="grid grid-cols-2 gap-3 text-sm">
+          <div><span class="text-xs font-bold text-slate-400">型式</span><br>${escapeHtml(info.model || "-")}</div>
+          <div><span class="text-xs font-bold text-slate-400">JANコード</span><br>${escapeHtml(info.janCode || "-")}</div>
+          <div><span class="text-xs font-bold text-slate-400">カテゴリ</span><br>${escapeHtml(info.category || "-")}</div>
+          <div><span class="text-xs font-bold text-slate-400">メーカー</span><br>${escapeHtml(info.maker || "-")}</div>
+          <div><span class="text-xs font-bold text-slate-400">区分</span><br><span class="inline-flex rounded-full border px-3 py-1 text-xs font-black ${typeClass}">${escapeHtml(record.type)}</span></div>
+          <div><span class="text-xs font-bold text-slate-400">状態</span><br>${escapeHtml(record.condition)}</div>
+          <div><span class="text-xs font-bold text-slate-400">数量</span><br><span class="font-black">${record.quantity}</span></div>
+          <div><span class="text-xs font-bold text-slate-400">顧客名</span><br>${escapeHtml(record.customerName || "-")}</div>
         </div>
 
-        <div class="flex gap-2 mt-3">
-          <button onclick="editRecord('${record.id}')" class="flex-1 rounded-lg bg-blue-600 text-white py-2 text-sm font-bold hover:brightness-110 active:scale-[0.98] transition-all">編集</button>
-          <button onclick="deleteRecord('${record.id}')" class="flex-1 rounded-lg bg-red-600 text-white py-2 text-sm font-bold hover:brightness-110 active:scale-[0.98] transition-all">削除</button>
+        <div class="mt-4 flex gap-2">
+          <button onclick="editRecord('${record.id}')" class="flex-1 rounded-xl bg-orange-500 py-2 text-sm font-black text-white transition-all hover:bg-orange-600 active:scale-[0.98]">編集</button>
+          <button onclick="deleteRecord('${record.id}')" class="flex-1 rounded-xl bg-red-500 py-2 text-sm font-black text-white transition-all hover:bg-red-600 active:scale-[0.98]">削除</button>
         </div>
+      </div>
+    `;
+  });
+}
+
+function renderStockAlerts(stocks) {
+  const alertList = $("stockAlertList");
+  if (!alertList) return;
+
+  const lowStocks = stocks
+    .filter(stock => stock.total <= 3)
+    .sort((a, b) => a.total - b.total)
+    .slice(0, 5);
+
+  if (lowStocks.length === 0) {
+    alertList.innerHTML = `
+      <div class="rounded-2xl border border-emerald-100 bg-emerald-50 px-4 py-4">
+        <p class="font-black text-emerald-700">現在、在庫アラートはありません</p>
+        <p class="mt-1 text-xs text-slate-500">総在庫数が3以下の商品がある場合に表示されます。</p>
+      </div>
+    `;
+    return;
+  }
+
+  alertList.innerHTML = "";
+
+  lowStocks.forEach(stock => {
+    const isCritical = stock.total <= 1;
+    const badgeClass = isCritical
+      ? "bg-red-500 text-white"
+      : "bg-orange-500 text-white";
+    const boxClass = isCritical
+      ? "border-red-100 bg-red-50"
+      : "border-orange-100 bg-orange-50";
+    const label = isCritical ? "在庫不足" : "残りわずか";
+
+    alertList.innerHTML += `
+      <div class="flex items-center justify-between gap-3 rounded-2xl border ${boxClass} px-4 py-3">
+        <div class="min-w-0">
+          <p class="truncate font-black text-slate-900">${escapeHtml(stock.name || stock.model || "-")}</p>
+          <p class="mt-1 text-xs text-slate-500">型式：${escapeHtml(stock.model || "-")} / 総在庫：${stock.total}</p>
+        </div>
+        <span class="shrink-0 rounded-full px-3 py-1 text-xs font-black ${badgeClass}">${label}</span>
       </div>
     `;
   });
@@ -643,49 +913,51 @@ function renderStock() {
   body.innerHTML = "";
   cards.innerHTML = "";
 
+  renderStockAlerts(stocks);
+
   if (stocks.length === 0) {
-    body.innerHTML = `<tr><td colspan="8" class="p-4 text-center text-slate-400">在庫はまだありません</td></tr>`;
-    cards.innerHTML = `<div class="p-4 text-center text-slate-400 border rounded-xl">在庫はまだありません</div>`;
+    body.innerHTML = `<tr><td colspan="8" class="p-5 text-center text-slate-400">在庫はまだありません</td></tr>`;
+    cards.innerHTML = `<div class="rounded-2xl border border-slate-200 bg-white p-4 text-center text-slate-400">在庫はまだありません</div>`;
     return;
   }
 
   stocks.forEach(stock => {
     body.innerHTML += `
-      <tr class="border-b">
-        <td class="p-2 whitespace-nowrap">${escapeHtml(stock.category)}</td>
-        <td class="p-2 whitespace-nowrap">${escapeHtml(stock.maker)}</td>
-        <td class="p-2 whitespace-nowrap">${escapeHtml(stock.name)}</td>
-        <td class="p-2 whitespace-nowrap font-semibold">${escapeHtml(stock.model)}</td>
-        <td class="p-2 whitespace-nowrap">${escapeHtml(stock.janCode)}</td>
-        <td class="p-2 text-right">${stock.newStock}</td>
-        <td class="p-2 text-right">${stock.usedStock}</td>
-        <td class="p-2 text-right font-bold">${stock.total}</td>
+      <tr class="transition hover:bg-orange-50/50">
+        <td class="p-3 whitespace-nowrap">${escapeHtml(stock.category)}</td>
+        <td class="p-3 whitespace-nowrap">${escapeHtml(stock.maker)}</td>
+        <td class="p-3 whitespace-nowrap font-bold text-slate-800">${escapeHtml(stock.name)}</td>
+        <td class="p-3 whitespace-nowrap font-black text-slate-900">${escapeHtml(stock.model)}</td>
+        <td class="p-3 whitespace-nowrap">${escapeHtml(stock.janCode)}</td>
+        <td class="p-3 text-right">${stock.newStock}</td>
+        <td class="p-3 text-right">${stock.usedStock}</td>
+        <td class="p-3 text-right font-black text-orange-600">${stock.total}</td>
       </tr>
     `;
 
     cards.innerHTML += `
-      <div class="rounded-xl border border-slate-200 p-3 bg-white shadow-md">
-        <div class="font-bold text-base mb-2">${escapeHtml(stock.name || stock.model)}</div>
+      <div class="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+        <div class="mb-3 font-black text-slate-900">${escapeHtml(stock.name || stock.model)}</div>
 
-        <div class="grid grid-cols-2 gap-2 text-sm mb-3">
-          <div><span class="text-slate-400">型式</span><br>${escapeHtml(stock.model || "-")}</div>
-          <div><span class="text-slate-400">JANコード</span><br>${escapeHtml(stock.janCode || "-")}</div>
-          <div><span class="text-slate-400">カテゴリ</span><br>${escapeHtml(stock.category || "-")}</div>
-          <div><span class="text-slate-400">メーカー</span><br>${escapeHtml(stock.maker || "-")}</div>
+        <div class="mb-4 grid grid-cols-2 gap-3 text-sm">
+          <div><span class="text-xs font-bold text-slate-400">型式</span><br>${escapeHtml(stock.model || "-")}</div>
+          <div><span class="text-xs font-bold text-slate-400">JANコード</span><br>${escapeHtml(stock.janCode || "-")}</div>
+          <div><span class="text-xs font-bold text-slate-400">カテゴリ</span><br>${escapeHtml(stock.category || "-")}</div>
+          <div><span class="text-xs font-bold text-slate-400">メーカー</span><br>${escapeHtml(stock.maker || "-")}</div>
         </div>
 
         <div class="grid grid-cols-3 gap-2 text-center">
-          <div class="rounded-lg bg-slate-100 p-2">
-            <div class="text-xs text-slate-500">新品</div>
-            <div class="font-bold">${stock.newStock}</div>
+          <div class="rounded-xl bg-slate-100 p-3">
+            <div class="text-xs font-bold text-slate-500">新品</div>
+            <div class="font-black">${stock.newStock}</div>
           </div>
-          <div class="rounded-lg bg-slate-100 p-2">
-            <div class="text-xs text-slate-500">中古</div>
-            <div class="font-bold">${stock.usedStock}</div>
+          <div class="rounded-xl bg-slate-100 p-3">
+            <div class="text-xs font-bold text-slate-500">中古</div>
+            <div class="font-black">${stock.usedStock}</div>
           </div>
-          <div class="rounded-lg bg-blue-100 p-2">
-            <div class="text-xs text-blue-600">総数</div>
-            <div class="font-bold text-blue-700">${stock.total}</div>
+          <div class="rounded-xl bg-orange-50 p-3">
+            <div class="text-xs font-bold text-orange-600">総数</div>
+            <div class="font-black text-orange-600">${stock.total}</div>
           </div>
         </div>
       </div>
@@ -728,6 +1000,16 @@ function addOrUpdateProduct(category, maker, name, model, janCode) {
 
 $("itemCode").addEventListener("input", lookupAndSetItemName);
 $("itemCode").addEventListener("change", lookupAndSetItemName);
+
+document.querySelectorAll("[data-page]").forEach(item => {
+  item.addEventListener("click", () => {
+    showPage(item.dataset.page);
+  });
+});
+
+$("dashboardProductsBtn").addEventListener("click", () => {
+  showPage("products");
+});
 
 $("productAccordionBtn").addEventListener("click", () => {
   const content = $("productAccordionContent");
@@ -922,6 +1204,7 @@ function editRecord(id) {
   $("cancelEditBtn").classList.remove("hidden");
 
   updateCustomerField();
+  showPage("dashboard");
   window.scrollTo({ top: 0, behavior: "smooth" });
 }
 
@@ -998,23 +1281,11 @@ $("exportBtn").addEventListener("click", () => {
 });
 
 $("historyTab").addEventListener("click", () => {
-  activeTab = "history";
-
-  $("historyArea").classList.remove("hidden");
-  $("stockArea").classList.add("hidden");
-
-  $("historyTab").className = "flex-1 rounded-xl bg-blue-600 text-white py-3 font-bold shadow-md hover:brightness-110 active:scale-[0.98] transition-all";
-  $("stockTab").className = "flex-1 rounded-xl bg-slate-200 text-slate-700 py-3 font-bold shadow-md hover:brightness-110 active:scale-[0.98] transition-all";
+  showHistoryContent("history");
 });
 
 $("stockTab").addEventListener("click", () => {
-  activeTab = "stock";
-
-  $("stockArea").classList.remove("hidden");
-  $("historyArea").classList.add("hidden");
-
-  $("stockTab").className = "flex-1 rounded-xl bg-blue-600 text-white py-3 font-bold shadow-md hover:brightness-110 active:scale-[0.98] transition-all";
-  $("historyTab").className = "flex-1 rounded-xl bg-slate-200 text-slate-700 py-3 font-bold shadow-md hover:brightness-110 active:scale-[0.98] transition-all";
+  showHistoryContent("stock");
 });
 
 $("typeSelect").addEventListener("change", updateCustomerField);
@@ -1119,9 +1390,8 @@ async function stopScanner() {
   $("stopScanBtn").classList.add("hidden");
 }
 
+showPage("dashboard");
 loadDataFromGas();
 setInterval(refreshFromGasQuietly, 10000);
 updateCustomerField();
 </script>
-</body>
-</html>
