@@ -30,14 +30,19 @@
   </style>
 </head>
 
-<body class="bg-slate-100 text-slate-800">
+<body class="min-h-screen bg-gradient-to-br from-slate-50 via-slate-100 to-blue-50 text-slate-800">
 <main class="max-w-6xl mx-auto p-4 pb-24">
-  <header class="mb-5">
-    <h1 class="text-2xl font-bold">CONNECT 在庫管理システム</h1>
-    <p id="syncStatus" class="text-sm text-slate-500 mt-1">Googleスプレッドシート同期対応</p>
+  <header class="mb-6 rounded-3xl bg-white/85 backdrop-blur shadow-lg border border-white p-5">
+    <div class="border-l-8 border-blue-600 pl-4">
+      <h1 class="text-2xl tracking-tight">
+        <span class="font-black text-blue-700">CONNECT</span>
+        <span class="font-bold text-slate-800">在庫管理システム</span>
+      </h1>
+      <p id="syncStatus" class="text-sm text-slate-500 mt-1">Googleスプレッドシート同期対応</p>
+    </div>
   </header>
 
-  <section class="bg-white rounded-2xl shadow p-4 mb-5">
+  <section class="bg-white/90 backdrop-blur rounded-2xl shadow-lg border border-white p-4 mb-5">
     <h2 id="formTitle" class="text-lg font-bold mb-4">在庫登録</h2>
     <input id="editingId" type="hidden" />
 
@@ -46,25 +51,25 @@
         <div>
           <label class="block text-sm font-semibold mb-1">型式 / JANコード</label>
           <input id="itemCode" type="text" placeholder="型式またはJANコード"
-            class="w-full rounded-xl border px-4 py-3 text-base" />
+            class="w-full rounded-xl border border-slate-200 px-4 py-3 text-base shadow-sm focus:ring-4 focus:ring-blue-100 focus:border-blue-500 outline-none transition-all" />
         </div>
 
         <div>
           <label class="block text-sm font-semibold mb-1">商品名</label>
           <input id="itemName" type="text" placeholder="自動反映または手入力"
-            class="w-full rounded-xl border px-4 py-3 text-base" />
+            class="w-full rounded-xl border border-slate-200 px-4 py-3 text-base shadow-sm focus:ring-4 focus:ring-blue-100 focus:border-blue-500 outline-none transition-all" />
           <p class="mt-1 text-xs text-slate-500">※未登録の商品は手入力してください</p>
         </div>
       </div>
 
       <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
-        <button id="startScanBtn" class="rounded-xl bg-blue-600 text-white py-3 font-bold">
+        <button id="startScanBtn" class="rounded-xl bg-blue-600 text-white py-3 font-bold shadow-md hover:brightness-110 active:scale-[0.98] transition-all">
           カメラで読み取る
         </button>
-        <button id="takePhotoBtn" class="rounded-xl bg-indigo-600 text-white py-3 font-bold">
+        <button id="takePhotoBtn" class="rounded-xl bg-indigo-600 text-white py-3 font-bold shadow-md hover:brightness-110 active:scale-[0.98] transition-all">
           カメラで写真を撮る
         </button>
-        <button id="stopScanBtn" class="rounded-xl bg-slate-600 text-white py-3 font-bold hidden">
+        <button id="stopScanBtn" class="rounded-xl bg-slate-600 text-white py-3 font-bold shadow-md hover:brightness-110 active:scale-[0.98] transition-all hidden">
           読み取り停止
         </button>
       </div>
@@ -75,13 +80,13 @@
         <p id="cameraStatus" class="text-xs text-slate-500 mb-2">
           JANコードを横長の枠内に合わせてください。
         </p>
-        <div id="reader" class="rounded-xl overflow-hidden border"></div>
+        <div id="reader" class="rounded-xl overflow-hidden border border-slate-200 shadow-inner"></div>
       </div>
 
       <div class="grid grid-cols-2 gap-3">
         <div>
           <label class="block text-sm font-semibold mb-1">入出区分</label>
-          <select id="typeSelect" class="w-full rounded-xl border px-4 py-3 bg-white">
+          <select id="typeSelect" class="w-full rounded-xl border border-slate-200 px-4 py-3 bg-white shadow-sm focus:ring-4 focus:ring-blue-100 focus:border-blue-500 outline-none transition-all">
             <option value="入庫">入庫（在庫を追加）</option>
             <option value="出庫">出庫（在庫を減らす）</option>
           </select>
@@ -89,7 +94,7 @@
 
         <div>
           <label class="block text-sm font-semibold mb-1">状態</label>
-          <select id="conditionSelect" class="w-full rounded-xl border px-4 py-3 bg-white">
+          <select id="conditionSelect" class="w-full rounded-xl border border-slate-200 px-4 py-3 bg-white shadow-sm focus:ring-4 focus:ring-blue-100 focus:border-blue-500 outline-none transition-all">
             <option value="新品">新品</option>
             <option value="中古">中古</option>
           </select>
@@ -99,61 +104,62 @@
       <div>
         <label class="block text-sm font-semibold mb-1">数量</label>
         <input id="quantityInput" type="number" min="1" value="1"
-          class="w-full rounded-xl border px-4 py-3 text-base" />
+          class="w-full rounded-xl border border-slate-200 px-4 py-3 text-base shadow-sm focus:ring-4 focus:ring-blue-100 focus:border-blue-500 outline-none transition-all" />
       </div>
 
       <div id="customerField" class="hidden">
         <label class="block text-sm font-semibold mb-1">顧客名 / 案件名</label>
-        <input id="customerInput" type="text" class="w-full rounded-xl border px-4 py-3 text-base" />
+        <input id="customerInput" type="text"
+          class="w-full rounded-xl border border-slate-200 px-4 py-3 text-base shadow-sm focus:ring-4 focus:ring-blue-100 focus:border-blue-500 outline-none transition-all" />
       </div>
 
       <div class="flex gap-3">
-        <button id="registerBtn" class="w-32 rounded-xl bg-emerald-600 text-white py-3 font-bold">
+        <button id="registerBtn" class="w-32 rounded-xl bg-emerald-600 text-white py-3 font-bold shadow-md hover:brightness-110 active:scale-[0.98] transition-all">
           登録
         </button>
-        <button id="cancelEditBtn" class="w-40 rounded-xl bg-slate-500 text-white py-3 font-bold hidden">
+        <button id="cancelEditBtn" class="w-40 rounded-xl bg-slate-500 text-white py-3 font-bold shadow-md hover:brightness-110 active:scale-[0.98] transition-all hidden">
           編集をキャンセル
         </button>
       </div>
     </div>
   </section>
 
-  <section class="bg-white rounded-2xl shadow p-4 mb-5">
+  <section class="bg-white/90 backdrop-blur rounded-2xl shadow-lg border border-white p-4 mb-5">
     <button id="productAccordionBtn"
-      class="w-full flex items-center justify-between rounded-xl bg-indigo-600 text-white py-3 px-4 font-bold">
+      class="w-full flex items-center justify-between rounded-xl bg-indigo-600 text-white py-3 px-4 font-bold shadow-md hover:brightness-110 active:scale-[0.98] transition-all">
       <span>商品一覧</span>
       <span id="productAccordionIcon">▼</span>
     </button>
 
     <div id="productAccordionContent" class="hidden mt-4">
       <div class="grid md:grid-cols-5 gap-3 mb-3">
-        <select id="categoryInput" class="rounded-xl border px-4 py-3 bg-white"></select>
-        <input id="makerInput" placeholder="メーカー名" class="rounded-xl border px-4 py-3" />
-        <input id="productNameInput" placeholder="商品名" class="rounded-xl border px-4 py-3" />
-        <input id="modelInput" placeholder="型式" class="rounded-xl border px-4 py-3" />
-        <input id="janInput" placeholder="JANコード" class="rounded-xl border px-4 py-3" />
+        <select id="categoryInput" class="rounded-xl border border-slate-200 px-4 py-3 bg-white shadow-sm focus:ring-4 focus:ring-blue-100 focus:border-blue-500 outline-none transition-all"></select>
+        <input id="makerInput" placeholder="メーカー名" class="rounded-xl border border-slate-200 px-4 py-3 shadow-sm focus:ring-4 focus:ring-blue-100 focus:border-blue-500 outline-none transition-all" />
+        <input id="productNameInput" placeholder="商品名" class="rounded-xl border border-slate-200 px-4 py-3 shadow-sm focus:ring-4 focus:ring-blue-100 focus:border-blue-500 outline-none transition-all" />
+        <input id="modelInput" placeholder="型式" class="rounded-xl border border-slate-200 px-4 py-3 shadow-sm focus:ring-4 focus:ring-blue-100 focus:border-blue-500 outline-none transition-all" />
+        <input id="janInput" placeholder="JANコード" class="rounded-xl border border-slate-200 px-4 py-3 shadow-sm focus:ring-4 focus:ring-blue-100 focus:border-blue-500 outline-none transition-all" />
       </div>
 
       <div class="grid md:grid-cols-2 gap-3 mb-3">
-        <input id="newCategoryInput" placeholder="追加するカテゴリ名" class="rounded-xl border px-4 py-3" />
-        <button id="addCategoryBtn" class="rounded-xl bg-slate-700 text-white py-3 font-bold">
+        <input id="newCategoryInput" placeholder="追加するカテゴリ名" class="rounded-xl border border-slate-200 px-4 py-3 shadow-sm focus:ring-4 focus:ring-blue-100 focus:border-blue-500 outline-none transition-all" />
+        <button id="addCategoryBtn" class="rounded-xl bg-slate-700 text-white py-3 font-bold shadow-md hover:brightness-110 active:scale-[0.98] transition-all">
           カテゴリを追加
         </button>
       </div>
 
-      <button id="addProductBtn" class="w-full rounded-xl bg-indigo-600 text-white py-3 font-bold mb-3">
+      <button id="addProductBtn" class="w-full rounded-xl bg-indigo-600 text-white py-3 font-bold mb-3 shadow-md hover:brightness-110 active:scale-[0.98] transition-all">
         商品一覧に登録
       </button>
 
       <label class="block text-sm font-semibold mb-1">CSVファイル読み込み</label>
       <input id="csvInput" type="file" accept=".csv,text/csv"
-        class="w-full rounded-xl border px-4 py-3 bg-white mb-2" />
+        class="w-full rounded-xl border border-slate-200 px-4 py-3 bg-white mb-2 shadow-sm focus:ring-4 focus:ring-blue-100 focus:border-blue-500 outline-none transition-all" />
 
       <p class="text-xs text-slate-500 mb-4">
         CSV形式：カテゴリ,メーカー名,商品名,型式,JANコード
       </p>
 
-      <div class="overflow-x-auto">
+      <div class="overflow-x-auto rounded-xl border border-slate-100 shadow-sm">
         <table class="w-full text-sm">
           <thead class="bg-slate-100">
             <tr>
@@ -171,20 +177,20 @@
     </div>
   </section>
 
-  <section class="bg-white rounded-2xl shadow p-4">
+  <section class="bg-white/90 backdrop-blur rounded-2xl shadow-lg border border-white p-4">
     <div class="flex gap-2 mb-4">
-      <button id="historyTab" class="flex-1 rounded-xl bg-blue-600 text-white py-3 font-bold">入出庫の履歴</button>
-      <button id="stockTab" class="flex-1 rounded-xl bg-slate-200 text-slate-700 py-3 font-bold">在庫管理表</button>
+      <button id="historyTab" class="flex-1 rounded-xl bg-blue-600 text-white py-3 font-bold shadow-md hover:brightness-110 active:scale-[0.98] transition-all">入出庫の履歴</button>
+      <button id="stockTab" class="flex-1 rounded-xl bg-slate-200 text-slate-700 py-3 font-bold shadow-md hover:brightness-110 active:scale-[0.98] transition-all">在庫管理表</button>
     </div>
 
-    <button id="exportBtn" class="w-full rounded-xl bg-emerald-600 text-white py-3 font-bold mb-4">
+    <button id="exportBtn" class="w-full rounded-xl bg-emerald-600 text-white py-3 font-bold mb-4 shadow-md hover:brightness-110 active:scale-[0.98] transition-all">
       出力
     </button>
 
     <div id="historyArea">
       <div id="historyCards" class="grid gap-3 md:hidden"></div>
 
-      <div class="hidden md:block overflow-x-auto">
+      <div class="hidden md:block overflow-x-auto rounded-xl border border-slate-100 shadow-sm">
         <table class="w-full text-sm">
           <thead class="bg-slate-100">
             <tr>
@@ -209,7 +215,7 @@
     <div id="stockArea" class="hidden">
       <div id="stockCards" class="grid gap-3 md:hidden"></div>
 
-      <div class="hidden md:block overflow-x-auto">
+      <div class="hidden md:block overflow-x-auto rounded-xl border border-slate-100 shadow-sm">
         <table class="w-full text-sm">
           <thead class="bg-slate-100">
             <tr>
@@ -316,13 +322,16 @@ async function saveAllData() {
       updatedAt: new Date().toISOString()
     };
 
-    const formData = new FormData();
+    const formData = new URLSearchParams();
     formData.append("json", JSON.stringify(payload));
 
-    await fetch(GAS_URL, {
+    const response = await fetch(GAS_URL, {
       method: "POST",
       body: formData
     });
+
+    const text = await response.text();
+    console.log("GAS保存レスポンス:", text);
 
     setSyncStatus("保存済み");
   } catch (error) {
@@ -555,7 +564,7 @@ function renderProducts() {
         <td class="p-2 font-semibold">${escapeHtml(product.model)}</td>
         <td class="p-2">${escapeHtml(product.janCode)}</td>
         <td class="p-2 text-center">
-          <button onclick="deleteProduct('${product.id}')" class="rounded-lg bg-red-600 text-white px-3 py-2 text-xs font-bold">
+          <button onclick="deleteProduct('${product.id}')" class="rounded-lg bg-red-600 text-white px-3 py-2 text-xs font-bold hover:brightness-110 active:scale-[0.98] transition-all">
             削除
           </button>
         </td>
@@ -593,14 +602,14 @@ function renderHistory() {
         <td class="p-2 text-right">${record.quantity}</td>
         <td class="p-2 whitespace-nowrap">${escapeHtml(record.customerName || "-")}</td>
         <td class="p-2 whitespace-nowrap text-center">
-          <button onclick="editRecord('${record.id}')" class="rounded-lg bg-blue-600 text-white px-3 py-2 text-xs font-bold">編集</button>
-          <button onclick="deleteRecord('${record.id}')" class="rounded-lg bg-red-600 text-white px-3 py-2 text-xs font-bold">削除</button>
+          <button onclick="editRecord('${record.id}')" class="rounded-lg bg-blue-600 text-white px-3 py-2 text-xs font-bold hover:brightness-110 active:scale-[0.98] transition-all">編集</button>
+          <button onclick="deleteRecord('${record.id}')" class="rounded-lg bg-red-600 text-white px-3 py-2 text-xs font-bold hover:brightness-110 active:scale-[0.98] transition-all">削除</button>
         </td>
       </tr>
     `;
 
     cards.innerHTML += `
-      <div class="rounded-xl border border-slate-200 p-3 bg-white">
+      <div class="rounded-xl border border-slate-200 p-3 bg-white shadow-md">
         <div class="flex justify-between gap-3 mb-2">
           <div class="font-bold text-base">${escapeHtml(info.name || info.model || record.code)}</div>
           <div class="text-xs text-slate-500">${escapeHtml(record.date)}</div>
@@ -618,8 +627,8 @@ function renderHistory() {
         </div>
 
         <div class="flex gap-2 mt-3">
-          <button onclick="editRecord('${record.id}')" class="flex-1 rounded-lg bg-blue-600 text-white py-2 text-sm font-bold">編集</button>
-          <button onclick="deleteRecord('${record.id}')" class="flex-1 rounded-lg bg-red-600 text-white py-2 text-sm font-bold">削除</button>
+          <button onclick="editRecord('${record.id}')" class="flex-1 rounded-lg bg-blue-600 text-white py-2 text-sm font-bold hover:brightness-110 active:scale-[0.98] transition-all">編集</button>
+          <button onclick="deleteRecord('${record.id}')" class="flex-1 rounded-lg bg-red-600 text-white py-2 text-sm font-bold hover:brightness-110 active:scale-[0.98] transition-all">削除</button>
         </div>
       </div>
     `;
@@ -655,7 +664,7 @@ function renderStock() {
     `;
 
     cards.innerHTML += `
-      <div class="rounded-xl border border-slate-200 p-3 bg-white">
+      <div class="rounded-xl border border-slate-200 p-3 bg-white shadow-md">
         <div class="font-bold text-base mb-2">${escapeHtml(stock.name || stock.model)}</div>
 
         <div class="grid grid-cols-2 gap-2 text-sm mb-3">
@@ -994,8 +1003,8 @@ $("historyTab").addEventListener("click", () => {
   $("historyArea").classList.remove("hidden");
   $("stockArea").classList.add("hidden");
 
-  $("historyTab").className = "flex-1 rounded-xl bg-blue-600 text-white py-3 font-bold";
-  $("stockTab").className = "flex-1 rounded-xl bg-slate-200 text-slate-700 py-3 font-bold";
+  $("historyTab").className = "flex-1 rounded-xl bg-blue-600 text-white py-3 font-bold shadow-md hover:brightness-110 active:scale-[0.98] transition-all";
+  $("stockTab").className = "flex-1 rounded-xl bg-slate-200 text-slate-700 py-3 font-bold shadow-md hover:brightness-110 active:scale-[0.98] transition-all";
 });
 
 $("stockTab").addEventListener("click", () => {
@@ -1004,8 +1013,8 @@ $("stockTab").addEventListener("click", () => {
   $("stockArea").classList.remove("hidden");
   $("historyArea").classList.add("hidden");
 
-  $("stockTab").className = "flex-1 rounded-xl bg-blue-600 text-white py-3 font-bold";
-  $("historyTab").className = "flex-1 rounded-xl bg-slate-200 text-slate-700 py-3 font-bold";
+  $("stockTab").className = "flex-1 rounded-xl bg-blue-600 text-white py-3 font-bold shadow-md hover:brightness-110 active:scale-[0.98] transition-all";
+  $("historyTab").className = "flex-1 rounded-xl bg-slate-200 text-slate-700 py-3 font-bold shadow-md hover:brightness-110 active:scale-[0.98] transition-all";
 });
 
 $("typeSelect").addEventListener("change", updateCustomerField);
