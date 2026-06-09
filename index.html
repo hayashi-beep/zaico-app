@@ -44,7 +44,7 @@
 
     <div class="grid gap-4">
       <div>
-        <label class="block text-sm font-semibold mb-1">型式 / バーコード</label>
+        <label class="block text-sm font-semibold mb-1">型式 / JANコード</label>
         <input id="itemCode" type="text" placeholder="型式またはJANコード"
           class="w-full rounded-xl border px-4 py-3 text-base" />
       </div>
@@ -121,10 +121,11 @@
     </button>
 
     <div id="productAccordionContent" class="hidden mt-4">
-      <div class="grid md:grid-cols-3 gap-3 mb-3">
+      <div class="grid md:grid-cols-4 gap-3 mb-3">
         <select id="categoryInput" class="rounded-xl border px-4 py-3 bg-white"></select>
         <input id="makerInput" placeholder="メーカー名" class="rounded-xl border px-4 py-3" />
-        <input id="modelInput" placeholder="型式 / バーコード" class="rounded-xl border px-4 py-3" />
+        <input id="modelInput" placeholder="型式" class="rounded-xl border px-4 py-3" />
+        <input id="janInput" placeholder="JANコード" class="rounded-xl border px-4 py-3" />
       </div>
 
       <div class="grid md:grid-cols-2 gap-3 mb-3">
@@ -143,7 +144,7 @@
         class="w-full rounded-xl border px-4 py-3 bg-white mb-2" />
 
       <p class="text-xs text-slate-500 mb-4">
-        CSV形式：カテゴリ,メーカー名,型式
+        CSV形式：カテゴリ,メーカー名,型式,JANコード
       </p>
 
       <div class="overflow-x-auto">
@@ -153,6 +154,7 @@
               <th class="p-2 text-left">カテゴリ</th>
               <th class="p-2 text-left">メーカー名</th>
               <th class="p-2 text-left">型式</th>
+              <th class="p-2 text-left">JANコード</th>
               <th class="p-2 text-center">操作</th>
             </tr>
           </thead>
@@ -183,6 +185,7 @@
               <th class="p-2 text-left">カテゴリ</th>
               <th class="p-2 text-left">メーカー名</th>
               <th class="p-2 text-left">型式</th>
+              <th class="p-2 text-left">JANコード</th>
               <th class="p-2 text-left">区分</th>
               <th class="p-2 text-left">状態</th>
               <th class="p-2 text-right">数量</th>
@@ -205,6 +208,7 @@
               <th class="p-2 text-left">カテゴリ</th>
               <th class="p-2 text-left">メーカー名</th>
               <th class="p-2 text-left">型式</th>
+              <th class="p-2 text-left">JANコード</th>
               <th class="p-2 text-right">新品在庫数</th>
               <th class="p-2 text-right">中古在庫数</th>
               <th class="p-2 text-right">総在庫数</th>
@@ -240,6 +244,16 @@ function setSyncStatus(text) {
   $("syncStatus").textContent = text;
 }
 
+function normalizeProducts(list) {
+  return (Array.isArray(list) ? list : []).map(product => ({
+    id: product.id || String(Date.now() + Math.random()),
+    category: product.category || "",
+    maker: product.maker || "",
+    model: product.model || "",
+    janCode: product.janCode || product.barcode || product.code || ""
+  }));
+}
+
 async function loadDataFromGas() {
   try {
     setSyncStatus("スプレッドシートから読み込み中...");
@@ -252,7 +266,7 @@ async function loadDataFromGas() {
     const data = await response.json();
 
     records = Array.isArray(data.records) ? data.records : [];
-    products = Array.isArray(data.products) ? data.products : [];
+    products = normalizeProducts(data.products);
     categories = Array.isArray(data.categories) && data.categories.length > 0
       ? data.categories
       : [...DEFAULT_CATEGORIES];
@@ -278,13 +292,12 @@ async function saveAllData() {
       updatedAt: new Date().toISOString()
     };
 
+    const formData = new FormData();
+    formData.append("json", JSON.stringify(payload));
+
     await fetch(GAS_URL, {
       method: "POST",
-      mode: "no-cors",
-      headers: {
-        "Content-Type": "text/plain;charset=utf-8"
-      },
-      body: JSON.stringify(payload)
+      body: formData
     });
 
     setSyncStatus("保存済み");
@@ -320,7 +333,7 @@ async function refreshFromGasQuietly() {
     const data = await response.json();
 
     records = Array.isArray(data.records) ? data.records : [];
-    products = Array.isArray(data.products) ? data.products : [];
+    products = normalizeProducts(data.products);
     categories = Array.isArray(data.categories) && data.categories.length > 0
       ? data.categories
       : [...DEFAULT_CATEGORIES];
@@ -372,17 +385,40 @@ function updateCustomerField() {
   $("customerField").classList.toggle("hidden", $("typeSelect").value !== "出庫");
 }
 
-function findProduct(model) {
-  return products.find(p => p.model === model);
+function findProduct(value) {
+  const keyword = String(value || "").trim();
+
+  return products.find(product =>
+    product.model === keyword ||
+    product.janCode === keyword
+  );
 }
 
-function getProductInfo(model) {
-  const product = findProduct(model);
+function getProductInfo(value) {
+  const product = findProduct(value);
+
+  if (product) {
+    return {
+      category: product.category || "",
+      maker: product.maker || "",
+      model: product.model || "",
+      janCode: product.janCode || "",
+      key: product.id
+    };
+  }
+
   return {
-    category: product?.category || "",
-    maker: product?.maker || "",
-    model
+    category: "",
+    maker: "",
+    model: value || "",
+    janCode: "",
+    key: value || ""
   };
+}
+
+function getStockKey(value) {
+  const product = findProduct(value);
+  return product ? product.id : value;
 }
 
 function renderCategoryOptions() {
@@ -423,27 +459,30 @@ function resetForm() {
 function getStockList() {
   const map = {};
 
-  records.forEach(r => {
-    if (!map[r.code]) {
-      const info = getProductInfo(r.code);
-      map[r.code] = {
+  records.forEach(record => {
+    const info = getProductInfo(record.code);
+    const stockKey = getStockKey(record.code);
+
+    if (!map[stockKey]) {
+      map[stockKey] = {
         category: info.category,
         maker: info.maker,
-        code: r.code,
+        model: info.model,
+        janCode: info.janCode,
         newStock: 0,
         usedStock: 0
       };
     }
 
-    const diff = r.type === "入庫" ? r.quantity : -r.quantity;
+    const diff = record.type === "入庫" ? record.quantity : -record.quantity;
 
-    if (r.condition === "新品") map[r.code].newStock += diff;
-    if (r.condition === "中古") map[r.code].usedStock += diff;
+    if (record.condition === "新品") map[stockKey].newStock += diff;
+    if (record.condition === "中古") map[stockKey].usedStock += diff;
   });
 
-  return Object.values(map).map(s => ({
-    ...s,
-    total: s.newStock + s.usedStock
+  return Object.values(map).map(stock => ({
+    ...stock,
+    total: stock.newStock + stock.usedStock
   }));
 }
 
@@ -452,18 +491,19 @@ function renderProducts() {
   body.innerHTML = "";
 
   if (products.length === 0) {
-    body.innerHTML = `<tr><td colspan="4" class="p-4 text-center text-slate-400">商品一覧はまだありません</td></tr>`;
+    body.innerHTML = `<tr><td colspan="5" class="p-4 text-center text-slate-400">商品一覧はまだありません</td></tr>`;
     return;
   }
 
-  products.forEach(p => {
+  products.forEach(product => {
     body.innerHTML += `
       <tr class="border-b">
-        <td class="p-2">${escapeHtml(p.category)}</td>
-        <td class="p-2">${escapeHtml(p.maker)}</td>
-        <td class="p-2 font-semibold">${escapeHtml(p.model)}</td>
+        <td class="p-2">${escapeHtml(product.category)}</td>
+        <td class="p-2">${escapeHtml(product.maker)}</td>
+        <td class="p-2 font-semibold">${escapeHtml(product.model)}</td>
+        <td class="p-2">${escapeHtml(product.janCode)}</td>
         <td class="p-2 text-center">
-          <button onclick="deleteProduct('${p.id}')" class="rounded-lg bg-red-600 text-white px-3 py-2 text-xs font-bold">
+          <button onclick="deleteProduct('${product.id}')" class="rounded-lg bg-red-600 text-white px-3 py-2 text-xs font-bold">
             削除
           </button>
         </td>
@@ -480,27 +520,28 @@ function renderHistory() {
   cards.innerHTML = "";
 
   if (records.length === 0) {
-    body.innerHTML = `<tr><td colspan="9" class="p-4 text-center text-slate-400">履歴はまだありません</td></tr>`;
+    body.innerHTML = `<tr><td colspan="10" class="p-4 text-center text-slate-400">履歴はまだありません</td></tr>`;
     cards.innerHTML = `<div class="p-4 text-center text-slate-400 border rounded-xl">履歴はまだありません</div>`;
     return;
   }
 
-  [...records].reverse().forEach(r => {
-    const info = getProductInfo(r.code);
+  [...records].reverse().forEach(record => {
+    const info = getProductInfo(record.code);
 
     body.innerHTML += `
       <tr class="border-b">
-        <td class="p-2 whitespace-nowrap">${escapeHtml(r.date)}</td>
+        <td class="p-2 whitespace-nowrap">${escapeHtml(record.date)}</td>
         <td class="p-2 whitespace-nowrap">${escapeHtml(info.category)}</td>
         <td class="p-2 whitespace-nowrap">${escapeHtml(info.maker)}</td>
-        <td class="p-2 whitespace-nowrap font-semibold">${escapeHtml(r.code)}</td>
-        <td class="p-2 whitespace-nowrap">${escapeHtml(r.type)}</td>
-        <td class="p-2 whitespace-nowrap">${escapeHtml(r.condition)}</td>
-        <td class="p-2 text-right">${r.quantity}</td>
-        <td class="p-2 whitespace-nowrap">${escapeHtml(r.customerName || "-")}</td>
+        <td class="p-2 whitespace-nowrap font-semibold">${escapeHtml(info.model)}</td>
+        <td class="p-2 whitespace-nowrap">${escapeHtml(info.janCode)}</td>
+        <td class="p-2 whitespace-nowrap">${escapeHtml(record.type)}</td>
+        <td class="p-2 whitespace-nowrap">${escapeHtml(record.condition)}</td>
+        <td class="p-2 text-right">${record.quantity}</td>
+        <td class="p-2 whitespace-nowrap">${escapeHtml(record.customerName || "-")}</td>
         <td class="p-2 whitespace-nowrap text-center">
-          <button onclick="editRecord('${r.id}')" class="rounded-lg bg-blue-600 text-white px-3 py-2 text-xs font-bold">編集</button>
-          <button onclick="deleteRecord('${r.id}')" class="rounded-lg bg-red-600 text-white px-3 py-2 text-xs font-bold">削除</button>
+          <button onclick="editRecord('${record.id}')" class="rounded-lg bg-blue-600 text-white px-3 py-2 text-xs font-bold">編集</button>
+          <button onclick="deleteRecord('${record.id}')" class="rounded-lg bg-red-600 text-white px-3 py-2 text-xs font-bold">削除</button>
         </td>
       </tr>
     `;
@@ -508,22 +549,23 @@ function renderHistory() {
     cards.innerHTML += `
       <div class="rounded-xl border border-slate-200 p-3 bg-white">
         <div class="flex justify-between gap-3 mb-2">
-          <div class="font-bold text-base">${escapeHtml(r.code)}</div>
-          <div class="text-xs text-slate-500">${escapeHtml(r.date)}</div>
+          <div class="font-bold text-base">${escapeHtml(info.model || record.code)}</div>
+          <div class="text-xs text-slate-500">${escapeHtml(record.date)}</div>
         </div>
 
         <div class="grid grid-cols-2 gap-2 text-sm">
+          <div><span class="text-slate-400">JANコード</span><br>${escapeHtml(info.janCode || "-")}</div>
           <div><span class="text-slate-400">カテゴリ</span><br>${escapeHtml(info.category || "-")}</div>
           <div><span class="text-slate-400">メーカー</span><br>${escapeHtml(info.maker || "-")}</div>
-          <div><span class="text-slate-400">区分</span><br>${escapeHtml(r.type)}</div>
-          <div><span class="text-slate-400">状態</span><br>${escapeHtml(r.condition)}</div>
-          <div><span class="text-slate-400">数量</span><br>${r.quantity}</div>
-          <div><span class="text-slate-400">顧客名</span><br>${escapeHtml(r.customerName || "-")}</div>
+          <div><span class="text-slate-400">区分</span><br>${escapeHtml(record.type)}</div>
+          <div><span class="text-slate-400">状態</span><br>${escapeHtml(record.condition)}</div>
+          <div><span class="text-slate-400">数量</span><br>${record.quantity}</div>
+          <div><span class="text-slate-400">顧客名</span><br>${escapeHtml(record.customerName || "-")}</div>
         </div>
 
         <div class="flex gap-2 mt-3">
-          <button onclick="editRecord('${r.id}')" class="flex-1 rounded-lg bg-blue-600 text-white py-2 text-sm font-bold">編集</button>
-          <button onclick="deleteRecord('${r.id}')" class="flex-1 rounded-lg bg-red-600 text-white py-2 text-sm font-bold">削除</button>
+          <button onclick="editRecord('${record.id}')" class="flex-1 rounded-lg bg-blue-600 text-white py-2 text-sm font-bold">編集</button>
+          <button onclick="deleteRecord('${record.id}')" class="flex-1 rounded-lg bg-red-600 text-white py-2 text-sm font-bold">削除</button>
         </div>
       </div>
     `;
@@ -539,44 +581,46 @@ function renderStock() {
   cards.innerHTML = "";
 
   if (stocks.length === 0) {
-    body.innerHTML = `<tr><td colspan="6" class="p-4 text-center text-slate-400">在庫はまだありません</td></tr>`;
+    body.innerHTML = `<tr><td colspan="7" class="p-4 text-center text-slate-400">在庫はまだありません</td></tr>`;
     cards.innerHTML = `<div class="p-4 text-center text-slate-400 border rounded-xl">在庫はまだありません</div>`;
     return;
   }
 
-  stocks.forEach(s => {
+  stocks.forEach(stock => {
     body.innerHTML += `
       <tr class="border-b">
-        <td class="p-2 whitespace-nowrap">${escapeHtml(s.category)}</td>
-        <td class="p-2 whitespace-nowrap">${escapeHtml(s.maker)}</td>
-        <td class="p-2 whitespace-nowrap font-semibold">${escapeHtml(s.code)}</td>
-        <td class="p-2 text-right">${s.newStock}</td>
-        <td class="p-2 text-right">${s.usedStock}</td>
-        <td class="p-2 text-right font-bold">${s.total}</td>
+        <td class="p-2 whitespace-nowrap">${escapeHtml(stock.category)}</td>
+        <td class="p-2 whitespace-nowrap">${escapeHtml(stock.maker)}</td>
+        <td class="p-2 whitespace-nowrap font-semibold">${escapeHtml(stock.model)}</td>
+        <td class="p-2 whitespace-nowrap">${escapeHtml(stock.janCode)}</td>
+        <td class="p-2 text-right">${stock.newStock}</td>
+        <td class="p-2 text-right">${stock.usedStock}</td>
+        <td class="p-2 text-right font-bold">${stock.total}</td>
       </tr>
     `;
 
     cards.innerHTML += `
       <div class="rounded-xl border border-slate-200 p-3 bg-white">
-        <div class="font-bold text-base mb-2">${escapeHtml(s.code)}</div>
+        <div class="font-bold text-base mb-2">${escapeHtml(stock.model)}</div>
 
         <div class="grid grid-cols-2 gap-2 text-sm mb-3">
-          <div><span class="text-slate-400">カテゴリ</span><br>${escapeHtml(s.category || "-")}</div>
-          <div><span class="text-slate-400">メーカー</span><br>${escapeHtml(s.maker || "-")}</div>
+          <div><span class="text-slate-400">JANコード</span><br>${escapeHtml(stock.janCode || "-")}</div>
+          <div><span class="text-slate-400">カテゴリ</span><br>${escapeHtml(stock.category || "-")}</div>
+          <div><span class="text-slate-400">メーカー</span><br>${escapeHtml(stock.maker || "-")}</div>
         </div>
 
         <div class="grid grid-cols-3 gap-2 text-center">
           <div class="rounded-lg bg-slate-100 p-2">
             <div class="text-xs text-slate-500">新品</div>
-            <div class="font-bold">${s.newStock}</div>
+            <div class="font-bold">${stock.newStock}</div>
           </div>
           <div class="rounded-lg bg-slate-100 p-2">
             <div class="text-xs text-slate-500">中古</div>
-            <div class="font-bold">${s.usedStock}</div>
+            <div class="font-bold">${stock.usedStock}</div>
           </div>
           <div class="rounded-lg bg-blue-100 p-2">
             <div class="text-xs text-blue-600">総数</div>
-            <div class="font-bold text-blue-700">${s.total}</div>
+            <div class="font-bold text-blue-700">${stock.total}</div>
           </div>
         </div>
       </div>
@@ -591,20 +635,26 @@ function renderAll() {
   renderStock();
 }
 
-function addOrUpdateProduct(category, maker, model) {
+function addOrUpdateProduct(category, maker, model, janCode) {
   addCategory(category);
 
-  const existing = products.find(p => p.model === model);
+  const existing = products.find(product =>
+    product.model === model ||
+    product.janCode === janCode
+  );
 
   if (existing) {
     existing.category = category;
     existing.maker = maker;
+    existing.model = model;
+    existing.janCode = janCode;
   } else {
     products.push({
       id: crypto.randomUUID ? crypto.randomUUID() : String(Date.now() + Math.random()),
       category,
       maker,
-      model
+      model,
+      janCode
     });
   }
 }
@@ -634,14 +684,16 @@ $("addProductBtn").addEventListener("click", async () => {
   const category = $("categoryInput").value;
   const maker = $("makerInput").value.trim();
   const model = $("modelInput").value.trim();
+  const janCode = $("janInput").value.trim();
 
   if (!category || !model) return;
 
-  addOrUpdateProduct(category, maker, model);
+  addOrUpdateProduct(category, maker, model, janCode);
   renderAll();
 
   $("makerInput").value = "";
   $("modelInput").value = "";
+  $("janInput").value = "";
 
   await saveProducts();
 });
@@ -649,7 +701,7 @@ $("addProductBtn").addEventListener("click", async () => {
 async function deleteProduct(id) {
   if (!confirm("この商品を商品一覧から削除しますか？")) return;
 
-  products = products.filter(p => p.id !== id);
+  products = products.filter(product => product.id !== id);
   renderAll();
 
   await saveProducts();
@@ -718,13 +770,16 @@ $("csvInput").addEventListener("change", async event => {
     const hasHeader =
       first.includes("カテゴリ") ||
       first.includes("メーカー") ||
-      first.includes("型式");
+      first.includes("型式") ||
+      first.includes("JANコード");
 
     const dataRows = hasHeader ? rows.slice(1) : rows;
 
     dataRows.forEach(row => {
-      const [category, maker, model] = row;
-      if (category && model) addOrUpdateProduct(category, maker || "", model);
+      const [category, maker, model, janCode] = row;
+      if (category && model) {
+        addOrUpdateProduct(category, maker || "", model, janCode || "");
+      }
     });
 
     renderAll();
@@ -746,14 +801,14 @@ $("registerBtn").addEventListener("click", async () => {
   if (!code || !quantity || quantity <= 0) return;
 
   if ($("editingId").value) {
-    records = records.map(r => r.id === $("editingId").value ? {
-      ...r,
+    records = records.map(record => record.id === $("editingId").value ? {
+      ...record,
       code,
       type,
       condition,
       quantity,
       customerName: type === "出庫" ? customerName : ""
-    } : r);
+    } : record);
   } else {
     records.push({
       id: crypto.randomUUID ? crypto.randomUUID() : String(Date.now() + Math.random()),
@@ -773,15 +828,15 @@ $("registerBtn").addEventListener("click", async () => {
 });
 
 function editRecord(id) {
-  const r = records.find(item => item.id === id);
-  if (!r) return;
+  const record = records.find(item => item.id === id);
+  if (!record) return;
 
-  $("editingId").value = r.id;
-  $("itemCode").value = r.code;
-  $("typeSelect").value = r.type;
-  $("conditionSelect").value = r.condition;
-  $("quantityInput").value = r.quantity;
-  $("customerInput").value = r.customerName || "";
+  $("editingId").value = record.id;
+  $("itemCode").value = record.code;
+  $("typeSelect").value = record.type;
+  $("conditionSelect").value = record.condition;
+  $("quantityInput").value = record.quantity;
+  $("customerInput").value = record.customerName || "";
 
   $("formTitle").textContent = "履歴を編集";
   $("registerBtn").textContent = "保存";
@@ -794,7 +849,7 @@ function editRecord(id) {
 async function deleteRecord(id) {
   if (!confirm("この履歴を削除しますか？")) return;
 
-  records = records.filter(r => r.id !== id);
+  records = records.filter(record => record.id !== id);
   renderAll();
 
   if ($("editingId").value === id) resetForm();
@@ -820,10 +875,20 @@ function downloadCSV(filename, rows) {
 
 function exportHistory() {
   const rows = [
-    ["日付", "カテゴリ", "メーカー名", "型式", "区分", "状態", "数量", "顧客名"],
-    ...records.map(r => {
-      const info = getProductInfo(r.code);
-      return [r.date, info.category, info.maker, r.code, r.type, r.condition, r.quantity, r.customerName];
+    ["日付", "カテゴリ", "メーカー名", "型式", "JANコード", "区分", "状態", "数量", "顧客名"],
+    ...records.map(record => {
+      const info = getProductInfo(record.code);
+      return [
+        record.date,
+        info.category,
+        info.maker,
+        info.model,
+        info.janCode,
+        record.type,
+        record.condition,
+        record.quantity,
+        record.customerName
+      ];
     })
   ];
 
@@ -832,8 +897,16 @@ function exportHistory() {
 
 function exportStock() {
   const rows = [
-    ["カテゴリ", "メーカー名", "型式", "新品在庫数", "中古在庫数", "総在庫数"],
-    ...getStockList().map(s => [s.category, s.maker, s.code, s.newStock, s.usedStock, s.total])
+    ["カテゴリ", "メーカー名", "型式", "JANコード", "新品在庫数", "中古在庫数", "総在庫数"],
+    ...getStockList().map(stock => [
+      stock.category,
+      stock.maker,
+      stock.model,
+      stock.janCode,
+      stock.newStock,
+      stock.usedStock,
+      stock.total
+    ])
   ];
 
   downloadCSV("在庫管理表.csv", rows);
