@@ -35,7 +35,7 @@
 <main class="max-w-6xl mx-auto p-4 pb-24">
   <header class="mb-5">
     <h1 class="text-2xl font-bold">CONNECT 在庫管理システム</h1>
-    <p class="text-sm text-slate-500 mt-1">JANコード読み取り・商品一覧・CSV出力対応</p>
+    <p id="syncStatus" class="text-sm text-slate-500 mt-1">Googleスプレッドシート同期対応</p>
   </header>
 
   <section class="bg-white rounded-2xl shadow p-4 mb-5">
@@ -218,24 +218,119 @@
 </main>
 
 <script>
-const RECORD_KEY = "inventory_records_v8";
-const PRODUCT_KEY = "inventory_products_v2";
-const CATEGORY_KEY = "inventory_categories_v1";
+const GAS_URL = "https://script.google.com/macros/s/AKfycbxOo1NgoxE5elZ5Eq4Va0WNuSXIE5P7HL7vLwXk5hLwDT6YYc_Zy2sGfN-BYLNapkkD/exec";
 
 const DEFAULT_CATEGORIES = [
   "HUB", "ルーター", "AP", "カメラ", "wi-fi", "電話機",
   "PoEインジェクター", "PBX関連", "その他備品"
 ];
 
-let records = JSON.parse(localStorage.getItem(RECORD_KEY) || "[]");
-let products = JSON.parse(localStorage.getItem(PRODUCT_KEY) || "[]");
-let categories = JSON.parse(localStorage.getItem(CATEGORY_KEY) || JSON.stringify(DEFAULT_CATEGORIES));
+let records = [];
+let products = [];
+let categories = [...DEFAULT_CATEGORIES];
 let activeTab = "history";
 
 let html5QrCode = null;
 let isScanning = false;
+let isSaving = false;
 
 const $ = id => document.getElementById(id);
+
+function setSyncStatus(text) {
+  $("syncStatus").textContent = text;
+}
+
+async function loadDataFromGas() {
+  try {
+    setSyncStatus("スプレッドシートから読み込み中...");
+
+    const response = await fetch(GAS_URL, {
+      method: "GET",
+      cache: "no-store"
+    });
+
+    const data = await response.json();
+
+    records = Array.isArray(data.records) ? data.records : [];
+    products = Array.isArray(data.products) ? data.products : [];
+    categories = Array.isArray(data.categories) && data.categories.length > 0
+      ? data.categories
+      : [...DEFAULT_CATEGORIES];
+
+    setSyncStatus("同期済み");
+    renderAll();
+  } catch (error) {
+    console.error("GAS読み込みエラー:", error);
+    setSyncStatus("同期エラー：GAS URLや公開設定を確認してください");
+    renderAll();
+  }
+}
+
+async function saveAllData() {
+  try {
+    isSaving = true;
+    setSyncStatus("保存中...");
+
+    const payload = {
+      records,
+      products,
+      categories,
+      updatedAt: new Date().toISOString()
+    };
+
+    await fetch(GAS_URL, {
+      method: "POST",
+      mode: "no-cors",
+      headers: {
+        "Content-Type": "text/plain;charset=utf-8"
+      },
+      body: JSON.stringify(payload)
+    });
+
+    setSyncStatus("保存済み");
+  } catch (error) {
+    console.error("GAS保存エラー:", error);
+    setSyncStatus("保存エラー");
+  } finally {
+    isSaving = false;
+  }
+}
+
+function saveRecords() {
+  return saveAllData();
+}
+
+function saveProducts() {
+  return saveAllData();
+}
+
+function saveCategories() {
+  return saveAllData();
+}
+
+async function refreshFromGasQuietly() {
+  if (isSaving || isScanning) return;
+
+  try {
+    const response = await fetch(GAS_URL, {
+      method: "GET",
+      cache: "no-store"
+    });
+
+    const data = await response.json();
+
+    records = Array.isArray(data.records) ? data.records : [];
+    products = Array.isArray(data.products) ? data.products : [];
+    categories = Array.isArray(data.categories) && data.categories.length > 0
+      ? data.categories
+      : [...DEFAULT_CATEGORIES];
+
+    renderAll();
+    setSyncStatus("同期済み");
+  } catch (error) {
+    console.error("自動同期エラー:", error);
+  }
+}
 
 function getJanFormatsToSupport() {
   if (typeof Html5QrcodeSupportedFormats !== "undefined") {
@@ -249,24 +344,12 @@ function getJanFormatsToSupport() {
 }
 
 function onScanSuccess(decodedText, decodedResult) {
-  document.getElementById("itemCode").value = decodedText;
+  $("itemCode").value = decodedText;
   $("cameraStatus").textContent = `読み取り成功：${decodedText}`;
   console.log("JAN読取成功:", decodedText, decodedResult);
 }
 
 function onScanFailure(errorMessage) {
-}
-
-function saveRecords() {
-  localStorage.setItem(RECORD_KEY, JSON.stringify(records));
-}
-
-function saveProducts() {
-  localStorage.setItem(PRODUCT_KEY, JSON.stringify(products));
-}
-
-function saveCategories() {
-  localStorage.setItem(CATEGORY_KEY, JSON.stringify(categories));
 }
 
 function escapeHtml(value) {
@@ -320,7 +403,6 @@ function addCategory(category) {
 
   if (!categories.includes(value)) {
     categories.push(value);
-    saveCategories();
   }
 }
 
@@ -535,7 +617,7 @@ $("productAccordionBtn").addEventListener("click", () => {
   $("productAccordionIcon").textContent = isClosed ? "▲" : "▼";
 });
 
-$("addCategoryBtn").addEventListener("click", () => {
+$("addCategoryBtn").addEventListener("click", async () => {
   const category = $("newCategoryInput").value.trim();
 
   if (!category) return;
@@ -544,9 +626,10 @@ $("addCategoryBtn").addEventListener("click", () => {
   renderCategoryOptions();
   $("categoryInput").value = category;
   $("newCategoryInput").value = "";
+  await saveCategories();
 });
 
-$("addProductBtn").addEventListener("click", () => {
+$("addProductBtn").addEventListener("click", async () => {
   const category = $("categoryInput").value;
   const maker = $("makerInput").value.trim();
   const model = $("modelInput").value.trim();
@@ -554,20 +637,20 @@ $("addProductBtn").addEventListener("click", () => {
   if (!category || !model) return;
 
   addOrUpdateProduct(category, maker, model);
-  saveProducts();
-  saveCategories();
   renderAll();
 
   $("makerInput").value = "";
   $("modelInput").value = "";
+
+  await saveProducts();
 });
 
-function deleteProduct(id) {
+async function deleteProduct(id) {
   if (!confirm("この商品を商品一覧から削除しますか？")) return;
 
   products = products.filter(p => p.id !== id);
-  saveProducts();
   renderAll();
+  await saveProducts();
 }
 
 function parseCSV(text) {
@@ -642,9 +725,8 @@ $("csvInput").addEventListener("change", async event => {
       if (category && model) addOrUpdateProduct(category, maker || "", model);
     });
 
-    saveProducts();
-    saveCategories();
     renderAll();
+    await saveAllData();
   } catch (error) {
     console.error("CSV読み込みエラー:", error);
   } finally {
@@ -652,7 +734,7 @@ $("csvInput").addEventListener("change", async event => {
   }
 });
 
-$("registerBtn").addEventListener("click", () => {
+$("registerBtn").addEventListener("click", async () => {
   const code = $("itemCode").value.trim();
   const type = $("typeSelect").value;
   const condition = $("conditionSelect").value;
@@ -682,9 +764,9 @@ $("registerBtn").addEventListener("click", () => {
     });
   }
 
-  saveRecords();
   renderAll();
   resetForm();
+  await saveRecords();
 });
 
 function editRecord(id) {
@@ -706,14 +788,15 @@ function editRecord(id) {
   window.scrollTo({ top: 0, behavior: "smooth" });
 }
 
-function deleteRecord(id) {
+async function deleteRecord(id) {
   if (!confirm("この履歴を削除しますか？")) return;
 
   records = records.filter(r => r.id !== id);
-  saveRecords();
   renderAll();
 
   if ($("editingId").value === id) resetForm();
+
+  await saveRecords();
 }
 
 $("cancelEditBtn").addEventListener("click", resetForm);
@@ -878,13 +961,8 @@ async function stopScanner() {
   $("stopScanBtn").classList.add("hidden");
 }
 
-records = records.map(r => ({ id: r.id || String(Date.now() + Math.random()), ...r }));
-products = products.map(p => ({ id: p.id || String(Date.now() + Math.random()), ...p }));
-
-saveRecords();
-saveProducts();
-saveCategories();
-renderAll();
+loadDataFromGas();
+setInterval(refreshFromGasQuietly, 10000);
 updateCustomerField();
 </script>
 </body>
