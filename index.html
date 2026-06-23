@@ -388,6 +388,7 @@ let currentPage = "dashboard";
 let html5QrCode = null;
 let isScanning = false;
 let isSaving = false;
+let readerVideoObserver = null;
 
 const $ = id => document.getElementById(id);
 
@@ -628,6 +629,112 @@ function getJanFormatsToSupport() {
   }
 
   return null;
+}
+
+function applyInlineVideoAttributes() {
+  const reader = $("reader");
+  if (!reader) return;
+
+  reader.querySelectorAll("video").forEach(video => {
+    video.setAttribute("playsinline", "true");
+    video.setAttribute("webkit-playsinline", "true");
+    video.setAttribute("muted", "true");
+    video.playsInline = true;
+    video.muted = true;
+  });
+}
+
+function watchReaderVideoForInlinePlayback() {
+  if (readerVideoObserver) {
+    readerVideoObserver.disconnect();
+  }
+
+  const reader = $("reader");
+  if (!reader || typeof MutationObserver === "undefined") {
+    applyInlineVideoAttributes();
+    return;
+  }
+
+  readerVideoObserver = new MutationObserver(applyInlineVideoAttributes);
+  readerVideoObserver.observe(reader, {
+    childList: true,
+    subtree: true
+  });
+  applyInlineVideoAttributes();
+}
+
+function stopWatchingReaderVideo() {
+  if (readerVideoObserver) {
+    readerVideoObserver.disconnect();
+    readerVideoObserver = null;
+  }
+}
+
+async function getPreferredCameraStartTargets() {
+  const targets = [];
+
+  try {
+    if (typeof Html5Qrcode !== "undefined" && typeof Html5Qrcode.getCameras === "function") {
+      const cameras = await Html5Qrcode.getCameras();
+
+      if (Array.isArray(cameras) && cameras.length > 0) {
+        const rearCamera = cameras.find(camera =>
+          /back|rear|environment|outward|背面|後面|外側/i.test(camera.label || "")
+        );
+
+        const fallbackCamera = cameras.length > 1
+          ? cameras[cameras.length - 1]
+          : cameras[0];
+
+        const selectedCamera = rearCamera || fallbackCamera;
+
+        if (selectedCamera?.id) {
+          targets.push(selectedCamera.id);
+        }
+      }
+    }
+  } catch (error) {
+    console.warn("カメラ一覧の取得に失敗しました。facingModeで再試行します:", error);
+  }
+
+  targets.push(
+    { facingMode: { exact: "environment" } },
+    { facingMode: { ideal: "environment" } },
+    { facingMode: "environment" },
+    true
+  );
+
+  return targets;
+}
+
+async function startScannerWithMobileFallbacks(config) {
+  const targets = await getPreferredCameraStartTargets();
+  let lastError = null;
+
+  for (const target of targets) {
+    try {
+      await html5QrCode.start(
+        target,
+        config,
+        onScanSuccess,
+        onScanFailure
+      );
+
+      applyInlineVideoAttributes();
+      return;
+    } catch (error) {
+      lastError = error;
+      console.warn("カメラ起動の候補に失敗しました:", target, error);
+
+      try {
+        if (html5QrCode) await html5QrCode.clear();
+      } catch (clearError) {
+        console.warn("カメラ再試行前のクリアに失敗しました:", clearError);
+      }
+    }
+  }
+
+  throw lastError || new Error("利用可能なカメラを開始できませんでした。");
 }
 
 function lookupProductByInput(value) {
@@ -1320,6 +1427,7 @@ $("startScanBtn").addEventListener("click", async () => {
 
   try {
     html5QrCode = new Html5Qrcode("reader");
+    watchReaderVideoForInlinePlayback();
 
     const formats = getJanFormatsToSupport();
 
@@ -1337,17 +1445,13 @@ $("startScanBtn").addEventListener("click", async () => {
       config.formatsToSupport = formats;
     }
 
-    await html5QrCode.start(
-      { facingMode: "environment" },
-      config,
-      onScanSuccess,
-      onScanFailure
-    );
+    await startScannerWithMobileFallbacks(config);
 
     isScanning = true;
   } catch (error) {
     console.error("カメラ起動エラー:", error);
 
+    stopWatchingReaderVideo();
     $("readerWrapper").classList.add("hidden");
     $("startScanBtn").classList.remove("hidden");
     $("stopScanBtn").classList.add("hidden");
@@ -1404,6 +1508,7 @@ async function stopScanner() {
 
   html5QrCode = null;
   isScanning = false;
+  stopWatchingReaderVideo();
 
   $("readerWrapper").classList.add("hidden");
   $("startScanBtn").classList.remove("hidden");
